@@ -5,7 +5,6 @@
 #include "picture.h"
 
 #include <vector>
-
 void Decoder::print_list()
 {
     printf(">>deder:    (direction:----->)  [Frame_num](dec_num)\n");
