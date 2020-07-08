@@ -2,7 +2,8 @@ cpi=g++
 ofile=../ofile
 CFLAGS+= -g -c 
 LDFLAGS+= -llua5.1
-a:main.cpp $(ofile)/bitsbuf.o \
+
+../bin/a:main.cpp $(ofile)/bitsbuf.o \
  $(ofile)/NAL.o\
  $(ofile)/slice.o \
  $(ofile)/Parser.o $(ofile)/cabac.o \
