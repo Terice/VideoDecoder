@@ -159,17 +159,17 @@ void cabac::RenormD()
     {
         codIRange  <<= 1;
         codIOffset <<= 1;
-        codIOffset |= (uint16_t)(p->read_bi());
+        codIOffset |= (uint8_t)(p->read_bi());
     }
 }
+//上下文变量的初始化
 uint8_t cabac::init_variable()
 {
     uint8_t ctxRangeCol = 0, mncol = 0;
     uint8_t preCtxState = 0;
     int m = 0, n = 0;
     ctxIdxOfInitVariables = new array2d<uint8_t>(1024, 2, 0);
-    // FILE* fps;
-    // fps = fopen("./cabacv", "w");
+    
     Slicetype lifeTimeSliceType = lifeTimeSlice->get_type();
     if(lifeTimeSliceType == I) {mncol = 0;}
     else {mncol = lifeTimeSlice->ps->cabac_init_idc + 1;}
@@ -205,12 +205,6 @@ uint8_t cabac::init_variable()
                 }
                 ctxIdxOfInitVariables->set_value(j, 0, pStateIdx);
                 ctxIdxOfInitVariables->set_value(j, 1, valMPS);
-				// if(399 == j || 400 == j || 401 == j || 211 == j)
-                // {
-                //     printf("ctxIdx: %4zu\t" , j);
-                //     printf("pStateIdx %4d\t", (int)ctxIdxOfInitVariables->get_value_xy(j, 0));
-                //     printf("valMPS    %4d\n", (int)ctxIdxOfInitVariables->get_value_xy(j, 1));
-				// }
             }
         }
     }
@@ -453,8 +447,6 @@ uint8_t cabac::read_sub_mb_type()
 }
 uint8_t cabac::read_transform_8x8_size_flag()
 {
-    uint16_t ctxIdx_result, ctxIdxInc;
-    uint16_t  ctxIdx_cur = 0;
     uint8_t result_cur = 0;
     uint16_t result = 0;
     
@@ -470,8 +462,8 @@ uint8_t cabac::read_transform_8x8_size_flag()
     else condTermFlagB = 1;
 
     ctxIdxInc = condTermFlagA + condTermFlagB;
-    ctxIdx_cur = ctxIdxInc + 399;
-    result_cur = (uint8_t)DecodeValueUsingCtxIdx(ctxIdx_cur, 0);
+    ctxIdx = ctxIdxInc + 399;
+    result_cur = (uint8_t)DecodeValueUsingCtxIdx(ctxIdx, 0);
     result = result_cur;
 
     return result;
@@ -483,8 +475,8 @@ uint16_t cabac::read_coded_block_pattern()
     uint8_t prefix_ctxIdxOffset = 73, suffix_ctxIdxOffset = 77;
     //maxBin:                     3                          1
     //prefix: FL cMax = 15
-    uint16_t ctxIdx_result, ctxIdxInc;
-    uint16_t  ctxIdx_cur = 0;
+    
+    
     uint8_t result_cur = 0;
     uint16_t result = 0;
     macroblock* currentMB = lifeTimeSlice->get_curMB();
@@ -494,10 +486,7 @@ uint16_t cabac::read_coded_block_pattern()
     uint16_t prefix_result = 0;
     int binIdx = -1;
     int tmp;
-
-    if(currentMB->up_slice->get_index() == 43 && currentMB->position_x == 0 && currentMB->position_y == 13)
-        int a = 0;
-
+    
     uint8_t  condTermFlagA = 0,  condTermFlagB = 0;
     tmp = 0;
     do
@@ -516,8 +505,8 @@ uint16_t cabac::read_coded_block_pattern()
             condTermFlagB = 0;
         else condTermFlagB = 1;
         prefix_ctxIdxInc = condTermFlagA + 2 * condTermFlagB;
-        ctxIdx_cur = prefix_ctxIdxInc + prefix_ctxIdxOffset;
-        result_cur = (uint8_t)DecodeValueUsingCtxIdx(ctxIdx_cur, 0);
+        ctxIdx = prefix_ctxIdxInc + prefix_ctxIdxOffset;
+        result_cur = (uint8_t)DecodeValueUsingCtxIdx(ctxIdx, 0);
         result_cur = result_cur << binIdx;
         prefix_result += result_cur;
     } while(binIdx < 3);
@@ -544,8 +533,8 @@ uint16_t cabac::read_coded_block_pattern()
             condTermFlagB = 0;
         else condTermFlagB = 1;
         suffix_ctxIdxInc = condTermFlagA + 2 * condTermFlagB + ((binIdx == 1) ? 4 : 0);
-        ctxIdx_cur = suffix_ctxIdxInc + suffix_ctxIdxOffset;
-        result_cur = (uint8_t)DecodeValueUsingCtxIdx(ctxIdx_cur, 0);
+        ctxIdx = suffix_ctxIdxInc + suffix_ctxIdxOffset;
+        result_cur = (uint8_t)DecodeValueUsingCtxIdx(ctxIdx, 0);
         result_cur = result_cur << binIdx;
         suffix_result += result_cur;
     } while(IsIn_TU_binarization(suffix_result, 2, binIdx) == -1);
@@ -1346,10 +1335,8 @@ uint16_t cabac::DecodeCtxIdxUsingBinIdx(uint16_t binIdx, uint16_t maxBinIdxCtx, 
 bool cabac::slice_end()
 {
     bool a;
-    delete ctxIdxOfInitVariables;
-    ctxIdxOfInitVariables = NULL;
+    Sdelete_s(ctxIdxOfInitVariables);
     if(state == 1) state = 0;
-
     return a;
 }
 bool cabac::set_pic(picture* pic1){this->pic = pic1; return true;}
@@ -1365,5 +1352,5 @@ cabac::cabac(Parser* parser)
 }
 cabac::~cabac()
 {
-    if(ctxIdxOfInitVariables != NULL) {delete ctxIdxOfInitVariables; ctxIdxOfInitVariables = NULL;}
+    Sdelete_s(ctxIdxOfInitVariables);
 }

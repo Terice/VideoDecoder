@@ -7,49 +7,35 @@ using namespace std;
 
 #include "Parser.h"
 #include "Decoder.h"
-#include "NAL.h"
-#include "slice.h"
-#define FILEPATH "../../resource/fox (copy).264"
 #include "Debug.h"
+#include "NAL.h"
+
+#define FILEPATH "../../../../resource/fox (copy).264"
 
 int main()
 {
     FILE* fp;
     
     if((fp = fopen(FILEPATH, "r")) == NULL) exit(-1);
-    fseek(fp, 0x2FFL,SEEK_SET);
+    // fseek(fp, 0x2FFL,SEEK_SET);
 
+    //这三个对象分别是Debug器，解析器，解码器
     Debug debug("./debug_config");
     Parser parser(fp, &debug);
     Decoder decoder;
-    
-    //SPS
-    NAL nal(&parser, &decoder);
-    nal.decode();
-    
-    //PPS
-    fseek(fp, 0x2E0L,SEEK_SET);
-    parser.rfsh();
-    NAL nal2(&parser, &decoder);
-    nal2.decode();
 
-    //the second IDR
-    //pic 201
-    // debug.set_control_all(true);
-    // fseek(fp, 0x9C18DL,SEEK_SET);
-    // parser.rfsh();
-    // NAL nal10(&parser, &decoder);
-    // nal10.decode();
-
-    // fseek(fp, 0x9C18AL,SEEK_SET);
-    // debug.set_control_all(false);
-    
+    debug.de_DltTime("start");
+    int i = 0;
+    //如果找到了下一个NAL，那么就解码他，否则退出循环
     while(parser.find_nextNAL())
     {
         NAL nal(&parser, &decoder);
         nal.decode();
+
+        cout << ">>frame:" << i << endl;
+        debug.de_DltTime("");
+        i++;
     }
-    
 
     fclose(fp);
     return 0;

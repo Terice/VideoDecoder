@@ -3,10 +3,12 @@
 
 #include <string>
 #include <stdio.h>
-
+#include <ctime>
 class Debug
 {
 private:
+    clock_t upr_t;
+    clock_t cur_t;
     std::string info_error;
     char de_cabac_state_running            ;
     char de_cabac_result_ae                ;
@@ -35,6 +37,9 @@ private:
     char de_inter_movevector               ;
     char de_pic_terminalchar               ;
 
+    char de_timer                          ;
+    char de_nal_info                       ;
+
     bool control_all;
 public:
     void set_control_all(bool control){control_all = control;}
@@ -56,6 +61,11 @@ public:
     bool conspic_result_Cr()       {if(control_all) return de_conspic_result_Cr;    else return false;};
     bool inter_movevector()        {if(control_all) return de_inter_movevector ;    else return false;};
     bool pic_terminalchar()        {if(control_all) return de_pic_terminalchar ;    else return false;};
+    bool timer()                   {if(control_all) return de_timer            ;    else return false;};
+    bool nal_info()                {if(control_all) return de_nal_info         ;    else return false;};
+
+    double get_RunTime();
+    double de_DltTime(const char* stage);
     Debug(const char*);
     ~Debug();
 };

@@ -74,6 +74,8 @@ void NAL::decode_SPS()
         data->offset_for_non_ref_pic                = parser->read_se();//
         data->ffset_for_top_to_bottom_field         = parser->read_se();//
         data->num_ref_frames_in_pic_order_cnt_cycle = parser->read_ue();//
+        Sdelete_l(data->offset_for_ref_frame);
+
         data->offset_for_ref_frame = new uint32_t[data->num_ref_frames_in_pic_order_cnt_cycle];
         for (size_t i = 0; i < data->num_ref_frames_in_pic_order_cnt_cycle; i++)
         {
@@ -229,7 +231,6 @@ uchar** NAL::decode_PIC()
 
 
     sl1->PraseSliceDataer();
-
     //片解码完毕，宏块已经入pic
     
 
@@ -288,16 +289,18 @@ uchar** NAL::decode_PIC()
                 cout << (*pic) << endl;
             }
         }
-        printf(">>nal  : type: %s, ref_idc: %2d, \n", type==IDR?"IDR":"NONE_IDR", nal_ref_idc);
-        decoder->print_list();
-        printf(">>slice: type: %2d, index: %2d\n", sl1->get_type(), sl1->get_index());
-        printf("----nal divide line----\n\n");
+        if(parser->debug->nal_info())
+        {
+            printf(">>nal  : type: %s, ref_idc: %2d, \n", type==IDR?"IDR":"NONE_IDR", nal_ref_idc);
+            decoder->print_list();
+            printf(">>slice: type: %2d, index: %2d\n", sl1->get_type(), sl1->get_index());
+            printf("----nal divide line----\n\n");
+        }
     }
     else
     {
     }
     
-
     Sdelete_s(sl1);
     return NULL;
 }

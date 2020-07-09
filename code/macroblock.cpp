@@ -38,7 +38,6 @@ void macroblock::Calc(int mode)
         //帧间也是4x4解码残差 
         this->Decode(0);
         this->ConstructPicture();
-        
     }
 
 
@@ -84,7 +83,6 @@ void macroblock::Init0(int mode)
 
     if(type == P_Skip)
     {
-
         mvd_l0       = new matrix[num_MBpart];
         for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l0[i] << init;}
         mvd_l1       = new matrix[num_MBpart];
@@ -145,7 +143,8 @@ void macroblock::Parse(int mode)
     else if(type == SI_M) mb_type -= 30;
     else if(type >= P_L0_16x16 && type <= P_Skip) mb_type -= 40;
     else if(type >= B_Direct_16x16 && type <= B_Skip) mb_type -= 50;
-    else cout << "error type" << endl;
+    else std::cout << "error type" << std::endl;
+
     num_MBpart = Get_NumMbPart(type);
     premode = Get_MbPartPredMode(this, type, 0);
     //PCM宏块直接读取所有的数据
@@ -779,8 +778,9 @@ int macroblock::Prediction_Inter_LumaSampleInterpolation(int xIntL, int yIntL, i
 void macroblock::Prediction_Intra4x4(int index)
 {
     int luma4x4Index = block4x4Index[index];
-
+    //如果是第一个4x4块，那么先解析整个宏块的预测模式
     if(index == 0) ParseIntra4x4PredMode();
+
     matrix pred_I(4,4,0);
     ParseIntra4x4(pred_I, Intra4x4PredMode[index], index);
 
@@ -837,12 +837,6 @@ void macroblock::ParseIntra4x4PredMode()
     }
     Sdelete_l(rem_intra4x4_pred_mode);
     Sdelete_l(prev_intra4x4_pred_mode_flag);
-    // 4x4帧内预测的模式打印
-    // for (uint8_t i = 0; i < 16; i++)
-    // {
-    //     if(i % 4 == 0) cout << endl;
-    //     cout << (int)Intra4x4PredMode[block4x4Index[i]];
-    // }
 }
 
 void macroblock::ParseIntra4x4(matrix& predI, int mode, int index)

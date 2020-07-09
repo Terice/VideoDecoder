@@ -61,6 +61,7 @@ public:
     bool find_nextNAL();
     bool read_bi();
     bool algi();
+    bool read_al();
     uint64_t next(uint32_t size);
 
     uint64_t read_un(uchar size);
@@ -72,6 +73,9 @@ public:
     uint64_t read_te(uint32_t range);//截断指数
     uint64_t read_ce();
     uint64_t read_ae(int);
+
+    //从当前缓冲区中读入一个char，会强制对齐
+    uchar read_ch();
 
     void rfsh();
     //以熵编码标志位做选择的两种读取方式

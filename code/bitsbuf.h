@@ -25,6 +25,7 @@ private:
     FILE* datares;
     void bseti(char indextoset);
     
+    bool bimax(){return buf_index == MAXBUFSIZE * 8 ? true : false;};
 
     void bufin(FILE* fp);//take bitstream into buf
     void bufin(uchar* ch);
@@ -35,9 +36,17 @@ public:
     Bitsbuf();
     Bitsbuf(FILE* datares);
     ~Bitsbuf();
-    
+    //读入一个bit
     bool bread();
-    bool balgi();
+    //读入一个字节
+    //会强制对齐一次
+    u_char bread_ch();
+    //判断是否对齐
+    bool balgi(){return buf_index % 8 == 0 ? true : false;};
+    //强制向后字节位对齐
+    //如果没有对齐，那么索引去掉8的余数，然后加1
+    bool bread_al(){if(!balgi()) {buf_index -= buf_index%8;buf_index+=8;} return true; };
+
     uint64_t bread_n(uchar size);
     uint64_t bnext(uint32_t nextsize);
 
@@ -52,6 +61,7 @@ public:
     int64_t  bread_in(uint16_t n);
     uint64_t bread_un(uint16_t n);
     uint64_t bread_fn(uint16_t n);
+
     
 
     void bfrsh();

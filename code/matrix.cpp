@@ -6,6 +6,28 @@ using namespace std;
 #endif
 
 
+matrix& operator>>=(matrix& left,int right)
+{
+    for (size_t i = 0; i < left.x_length; i++)
+    {
+        for (size_t j = 0; j < left.y_length; j++)
+        {
+            left[i][j] >>= right;
+        }
+    }
+    return left;
+}
+matrix& operator<<=(matrix& left,int right)
+{
+    for (size_t i = 0; i < left.x_length; i++)
+    {
+        for (size_t j = 0; j < left.y_length; j++)
+        {
+            left[i][j] <<= right;
+        }
+    }
+    return left;
+}
 matrix& matrix::operator+=(int right)
 {
     for (size_t i = 0; i < x_length * y_length; i++)

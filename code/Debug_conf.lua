@@ -47,6 +47,8 @@ DE_INTER_MOVEVECTOR              = 0
 --最后的图像字符画
 DE_PIC_TERMINATECHAR             = 1
 
+DE_TIMER                         = 0
+DE_NAL_INFO                      = 0
 function get_conf()
     print(">>script:")
     print("         DE_CABAC_STATE          :"..DE_CABAC_STATE          ) 
@@ -69,6 +71,7 @@ function get_conf()
     print("         DE_CONSPIC_RESULT_Cr    :"..DE_CONSPIC_RESULT_Cr    ) 
     print("         DE_INTER_MOVEVECTOR     :"..DE_INTER_MOVEVECTOR     ) 
     print("         DE_PIC_TERMINATECHAR    :"..DE_PIC_TERMINATECHAR    ) 
+    print("         DE_TIMER                :"..DE_TIMER                ) 
     if(DE_RESIDUAL_RESULT == 1) then 
         DE_RESIDUAL_RESULT_Y             = 1
         DE_RESIDUAL_RESULT_Cr            = 1
@@ -96,7 +99,9 @@ function get_conf()
         DE_CONSPIC_RESULT_Y , DE_CONSPIC_RESULT_Cb , DE_CONSPIC_RESULT_Cr,
         DE_CONSPIC_RESULT_Y , DE_CONSPIC_RESULT_Cb , DE_CONSPIC_RESULT_Cr, 
         DE_INTER_MOVEVECTOR,
-        DE_PIC_TERMINATECHAR
+        DE_PIC_TERMINATECHAR,
+        DE_TIMER,
+        DE_NAL_INFO
 end
 
 

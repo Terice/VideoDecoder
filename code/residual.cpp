@@ -198,8 +198,9 @@ void residual::Decode(uint8_t index)
 }
 void residual::Decode_Chroma(int iCbCr)
 {
+    //取得当前的色度量化参数
     qP = mb->QPC_;
-    matrix*c = new matrix(2,2,0);
+    matrix* c = new matrix(2,2,0);
     for (uint8_t i = 0; i < 4; i++) (*c).get_value_i(i) = (*chroma[0])[iCbCr]->value[i];
     
 
@@ -282,20 +283,33 @@ void residual::Decode_Intra4x4()
 void residual::Decode_Intra16x16()
 {
     qP = mb->QPY_;
-    matrix* c = new matrix(4, 4, 0);
-    Inverse4x4Scan(luma[1]->value, (*c));
+    matrix c(4, 4, 0);
+    Inverse4x4Scan(luma[1]->value, c);
 
 
     //Intra_16x16 DC transform and scaling
-    (*c)  = (*decoder->matrix_4x4Trans * (*c)  * *decoder->matrix_4x4Trans);
-    if(qP >= 36) (*c)  = (((*c)  * LevelScale4x4(qP % 6, 0, 0)) << (qP / 6 - 6));
-    else (*c)  = ((((*c)  * LevelScale4x4(qP % 6, 0, 0)) + (1 << (5 - qP /6))) >> (6 - qP / 6));
+    c  = (*decoder->matrix_4x4Trans * c  * *decoder->matrix_4x4Trans);
 
-    if(parser->debug->residual_transcoeff()) cout << (*c) << endl;
+    //原本使用符号重载的抽象公式，但是每次都需要值拷贝两次，所以拆开成多个公式，直接在左值做修改，
+    if(qP >= 36)
+    {
+        // c  = ((c  * LevelScale4x4(qP % 6, 0, 0)) << (qP / 6 - 6));
+        c *= LevelScale4x4(qP % 6, 0, 0);
+        c <<= (qP / 6 - 6);
+    }
+    else 
+    {
+        //c  = (((c  * LevelScale4x4(qP % 6, 0, 0)) + (1 << (5 - qP /6))) >> (6 - qP / 6));
+        c *= LevelScale4x4(qP % 6, 0, 0);
+        c += (1 << (5 - qP /6));
+        c >>= (6 - qP / 6);
+    }
+
+    if(parser->debug->residual_transcoeff()) cout << c<< endl;
 
     matrix* dcY = new matrix(4,4);
-    (*dcY) << (*c) ;
-    delete c;
+    (*dcY) << c ;
+
     array2d<matrix*>* lumaResidual = new array2d<matrix*>(4, 4, NULL);
     for (uint8_t i = 0; i < 16; i++)
     {lumaResidual->get_value_i(i) = new matrix(4,4,0);}
@@ -347,7 +361,7 @@ matrix residual::ScalingAndTransform_Residual4x4Blocks(int BitDepth, int qP, mat
             if(qP >= 24) d[i][j] = ((*c)[i][j] * LevelScale4x4(qP % 6, i, j)) << (qP / 6 - 4);
             else 
             {
-                d[i][j] = ((*c)[i][j] * LevelScale4x4(qP % 6, i, j) + (int)pow(2, 3 - qP / 6)) >> (4 - qP / 6);
+                d[i][j] = ((*c)[i][j] * LevelScale4x4(qP % 6, i, j) + (int)powl(2, 3 - qP / 6)) >> (4 - qP / 6);
             }
         }
     }
@@ -360,39 +374,45 @@ matrix residual::ScalingAndTransform_Residual4x4Blocks(int BitDepth, int qP, mat
     for(i = 0; i < 4; i++) {e[i][3] = d[i][1] + (d[i][3] >> 1);}
 
     //f_ij
-    matrix f(4,4,0);
+    matrix f(4,4);
+    f << d;//不需要的空间重新利用
     for(i = 0; i < 4; i++) {f[i][0] = e[i][0] + e[i][3];}
     for(i = 0; i < 4; i++) {f[i][1] = e[i][1] + e[i][2];}
     for(i = 0; i < 4; i++) {f[i][2] = e[i][1] - e[i][2];}
     for(i = 0; i < 4; i++) {f[i][3] = e[i][0] - e[i][3];}
 
     //g_ij
-    matrix g(4,4,0);
+    matrix g(4,4);
+    g << e;//不需要的空间重新利用
     for(j = 0; j < 4; j++) {g[0][j] = f[0][j] + f[2][j];}
     for(j = 0; j < 4; j++) {g[1][j] = f[0][j] - f[2][j];}
     for(j = 0; j < 4; j++) {g[2][j] =(f[1][j] >> 1) - f[3][j];}
     for(j = 0; j < 4; j++) {g[3][j] = f[1][j] + (f[3][j] >> 1);}
 
     //h_ij
-    matrix h(4,4,0);
+    matrix h(4,4);
+    h << f;//不需要的空间重新利用
     for(j = 0; j < 4; j++) {h[0][j] = g[0][j] + g[3][j];}
     for(j = 0; j < 4; j++) {h[1][j] = g[1][j] + g[2][j];}
     for(j = 0; j < 4; j++) {h[2][j] = g[1][j] - g[2][j];}
     for(j = 0; j < 4; j++) {h[3][j] = g[0][j] - g[3][j];}
-    if(0)
-    {
-        cout << ">>residual: d e f  g h:-----------" << endl;
-        cout << d << endl;
-        cout << e << endl;
-        cout << f << endl;
-        cout << g << endl;
-        cout << h << endl;
-        cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^" << endl;
-    }
+    //这个if已经无法使用
+    // if(0)
+    // {
+    //     cout << ">>residual: d e f  g h:-----------" << endl;
+    //     cout << d << endl;
+    //     cout << e << endl;
+    //     cout << f << endl;
+    //     cout << g << endl;
+    //     cout << h << endl;
+    //     cout << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^" << endl;
+    // }
     //r_ij
-    matrix r(4,4,0);
-    r = ((h + 32) >> 6);
-
+    matrix r(4,4);
+    //r = ((h + 32) >> 6);
+    r << h;//h的结果直接交给r并在r上运算
+    r += 32;
+    r >>= 6;
     if(0)
     cout << ">>residual: 16x16 Y out put:\n" << r << endl;
 

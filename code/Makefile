@@ -1,9 +1,12 @@
 cpi=g++
+bin=../bin
 ofile=../ofile
 CFLAGS+= -g -c 
 LDFLAGS+= -llua5.1
+#target=../bin/a
+target=a
 
-../bin/a:main.cpp $(ofile)/bitsbuf.o \
+$(target):main.cpp $(ofile)/bitsbuf.o \
  $(ofile)/NAL.o\
  $(ofile)/slice.o \
  $(ofile)/Parser.o $(ofile)/cabac.o \
@@ -17,6 +20,7 @@ $(ofile)/%.o:%.cpp
 	$(cpi) $(CFLAGS) $^    -o  $@
 clean:
 	rm $(ofile)/*.o ./a
+	rm $(bin)/a
 
 earse:
 	rm $(ofile)/Decoder.o $(ofile)/macroblock.o $(ofile)/Parser.o $(ofile)/cabac.o $(ofile)/slice.o    

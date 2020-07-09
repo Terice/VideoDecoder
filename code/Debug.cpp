@@ -55,7 +55,7 @@ Debug::Debug(const char* filename_config)
     //对于控制符的强制控制等处理由lua的函数来完成
     //入栈一次获得配置的函数，结果在lua的栈中
     lua_getglobal(L, "get_conf");
-    int config_length = 17;
+    int config_length = 19;
     //调用这个函数，返回到lua栈中
     lua_pcall(L, 0,config_length,0);
     //控制符的地址依次放入一个char指针里面，
@@ -83,6 +83,8 @@ Debug::Debug(const char* filename_config)
 
         &de_inter_movevector           ,
         &de_pic_terminalchar           ,
+        &de_timer                      ,
+        &de_nal_info                   ,
     };
     if(!state)
     {
@@ -98,8 +100,23 @@ Debug::Debug(const char* filename_config)
     //关闭lua虚拟机
     lua_close(L);
     control_all = true;
+    //获取运行初始时间
+    upr_t = clock();
 }
 
+double Debug::get_RunTime()
+{
+
+}
+double Debug::de_DltTime(const char* stage)
+{
+    double result = 0.0;
+    cur_t = clock();
+    result = (double)(cur_t - upr_t)/CLOCKS_PER_SEC;
+    upr_t = cur_t;
+    printf(">>Debug: RunTime: %f,   stage:%s\n", result, stage);
+    return result;
+}
 Debug::~Debug()
 {
 }

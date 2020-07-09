@@ -17,16 +17,23 @@ public:
     bool operator<<(matrix& right);
     matrix& operator=(const matrix&);
     matrix operator+(const matrix&);
+    
+    //带等号的运算符都直接在源对象上面直接赋值
     matrix& operator+=(const matrix&);
     matrix& operator+=(int);
     matrix& operator*=(int);
     matrix& operator/=(int);
+    friend matrix& operator>>=(matrix& left,int right);
+    friend matrix& operator<<=(matrix& left,int right);
+
     friend matrix operator*(const matrix& left, const matrix& right);
+
     friend matrix operator*(const matrix& left, int right);
     friend matrix operator>>(const matrix& left,int right);
     friend matrix operator+(const matrix& left, const int right);
     friend bool operator<(array2d<int>& dst, matrix& ma);
     friend bool operator>(array2d<int>& dst, matrix& ma);
+
     friend std::ostream&  operator<<(std::ostream& out ,const matrix& ma);
     bool Set_r(int row, int value);
     int Sum_r(int row);

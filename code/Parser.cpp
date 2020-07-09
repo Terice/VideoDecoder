@@ -4,6 +4,7 @@
 #include "Decoder.h"
 
 bool Parser::read_bi(){return bitstream->bread();}
+bool Parser::read_al(){return bitstream->bread_al();}
 bool Parser::algi(){return bitstream->balgi();}
 
 uint64_t Parser::next(uint32_t size){return bitstream->bnext(size);}
@@ -16,25 +17,34 @@ uint64_t Parser::read_te(uint32_t range){return bitstream->bread_te(range);}
 uint64_t Parser::read_ce(){return 0;}
 uint64_t Parser::read_ae(int syntax){return cabac_core->cread_ae(syntax);}
 uint16_t Parser::read_12(){return 0;}
-
+uchar Parser::read_ch(){return bitstream->bread_ch();};
 bool Parser::find_nextNAL()
 {
-    //0 表示没有找到，1 表示找到第一个00， 2 表示找到第二个00 4 表示找到 第三个00 5 表示找到第三个之后的01   6表示找到第二个之后的01
+    // 0 表示没有找到，1 表示找到第一个00， 2 表示找到第二个00 4 表示找到 第三个00 5 表示找到第三个之后的01   6表示找到第二个之后的01
     uint8_t state = 0;
-    while(!algi()){read_bi();}
+    //强制对齐到当前未对齐索引后面第一个对齐位
+    read_al();
     while(state != 7)
     {
-        uint8_t tmp = read_un(8);
-        
+        u_char tmp = read_ch();
+        /*                            1---------[s6]----------\       .__________.
+                                      |                        \----->|  finded  |
+            [s0] --0--> [s1] --0--> [s2] --0--> [s4] --1--> [s5]----->|__________|
+              |           |           |           |           |             |
+              |<----------/ other     |           |           |             |
+              |<----------------------/ other     |           |             |
+              |<----------------------------------/ other     |             |
+              |<----------------------------------------------/other        |
+              \<------------------------------------------------------------/
+        */
         switch (state)
         {
         case 0:if(tmp == 0) state = 1; break;
-        case 1:if(tmp == 0) state = 2; break;
-        case 2:if(tmp == 0) state = 4; else state = 6; break;
+        case 1:if(tmp == 0) state = 2; else state = 0; break;
+        case 2:if(tmp == 0) state = 4; else if(tmp == 1) state = 6; else state = 0; break;
         case 4:if(tmp == 1) state = 5; else state = 0;break;
         default:state = 0;break;
         }
-
         if(state == 5 || state == 6) {state = 0; break;}
     }
     return true;
@@ -52,6 +62,7 @@ Parser::Parser(FILE* datares, Debug* debug)
     pS->pps = new PPS_data();
     pS->sps = new SPS_data();
     slice_idx = 0;
+    
 }
 Parser::~Parser()
 {

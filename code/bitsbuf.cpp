@@ -22,8 +22,24 @@ static const uint16_t me_chart03[16][2] = {
     {  9, 9 }
 };
 
+u_char Bitsbuf::bread_ch()
+{
+    u_char result = 0;
+    //强制对齐一次
+    bread_al();
+    //如果是在边界,那么刷新一次缓存区
+    if(buf_index == MAXBUFSIZE * 8) 
+        bfrsh();
+    result = buf_data[buf_index/8];
+    //索引后移动8位
+    buf_index += 8;
+
+    return result;
+
+}
 bool Bitsbuf::bread()
 {
+    if(bimax()) bfrsh();
     uchar charIndex = buf_index / 8;
     uchar bitsIndex = buf_index % 8;
     bool result = 1;
@@ -82,6 +98,7 @@ uint64_t Bitsbuf::bread_n(uchar size)
 }
 void Bitsbuf:: bfrsh()
 { 
+    
     if(!buf2_state)
     {
         // cout<<">>buf  :refresh the file"<<endl;
@@ -229,12 +246,7 @@ uint64_t Bitsbuf::bread_me(uint16_t ChromaArrayType, uint32_t mb_type)
     if(ChromaArrayType == 0 || ChromaArrayType == 3) return me_chart03[result][mb_type];
     else return me_chart12[result][mb_type];
 }
-bool Bitsbuf ::balgi()
-{
-    if(buf_index % 8 == 0) return true;
-    else return false; 
-}
-
+//bool Bitsbuf ::balgi(){return buf_index % 8 == 0 ? true : false;}
 
 
 Bitsbuf::Bitsbuf()
