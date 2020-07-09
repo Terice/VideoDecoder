@@ -208,9 +208,6 @@ uint8_t cabac::init_variable()
             }
         }
     }
-
-    
-    
     return 1;
 }
 uint8_t cabac::init_engine()
@@ -486,7 +483,7 @@ uint16_t cabac::read_coded_block_pattern()
     uint16_t prefix_result = 0;
     int binIdx = -1;
     int tmp;
-    
+
     uint8_t  condTermFlagA = 0,  condTermFlagB = 0;
     tmp = 0;
     do
@@ -573,13 +570,10 @@ int8_t cabac::read_mb_qp_delta()
 }
 uint8_t cabac::read_significant_coeff_flag(int syntaxelement)
 {
-    if(syntaxelement == 0xe6213f)
-        int a = 0;
     //get ctxBlockCat and maxNumCoeff
     uint8_t ctxBlockCat = (syntaxelement >> 8) & 0xF;
     uint8_t maxNumCoeff = coded_blokc_flag_maxNumCoeff[ctxBlockCat];
     uint8_t levelListIdx = syntaxelement >> 20;
-    uint8_t ctxIdxInc;
 
     //get ctxIdxOffset
     uint16_t ctxIdxOffset = 0;
@@ -608,7 +602,6 @@ uint8_t cabac::read_last_significant_coeff_flag(int syntaxelement)
     uint8_t ctxBlockCat = (syntaxelement >> 8) & 0xF;
     uint8_t maxNumCoeff = coded_blokc_flag_maxNumCoeff[ctxBlockCat];
     uint8_t levelListIdx = syntaxelement >> 20;
-    uint8_t ctxIdxInc;uint16_t ctxIdx_cur;
 
     //get ctxIdxOffset
     uint16_t ctxIdxOffset = 0;
@@ -624,9 +617,9 @@ uint8_t cabac::read_last_significant_coeff_flag(int syntaxelement)
     else if(ctxBlockCat == 3) ctxIdxInc = Min(levelListIdx / 1 , 2);
     else ctxIdxInc = ctxIncForCtxBlockCat[levelListIdx][2];
     
-    ctxIdx_cur = (int)ctxIdxInc + (int)ctxIdxBlockCatOffsetOfctxBlockCat[2][ctxBlockCat] + (int)ctxIdxOffset;
+    ctxIdx = (int)ctxIdxInc + (int)ctxIdxBlockCatOffsetOfctxBlockCat[2][ctxBlockCat] + (int)ctxIdxOffset;
 
-    uint8_t result = DecodeValueUsingCtxIdx(ctxIdx_cur, 0);
+    uint8_t result = DecodeValueUsingCtxIdx(ctxIdx, 0);
 
     return result;
 }
@@ -1334,10 +1327,10 @@ uint16_t cabac::DecodeCtxIdxUsingBinIdx(uint16_t binIdx, uint16_t maxBinIdxCtx, 
 
 bool cabac::slice_end()
 {
-    bool a;
     Sdelete_s(ctxIdxOfInitVariables);
     if(state == 1) state = 0;
-    return a;
+
+    return true;
 }
 bool cabac::set_pic(picture* pic1){this->pic = pic1; return true;}
 bool cabac::set_slice(Slice* sl){this->lifeTimeSlice = sl; return true;}

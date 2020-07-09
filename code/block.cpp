@@ -82,7 +82,7 @@ block::~block()
             if(this->childBlock && this->childBlock[i])
             Sdelete_s(this->childBlock[i]);
         }
+        Sdelete_l(childBlock);
     }
     Sdelete_l(value);
-    Sdelete_l(childBlock);
 }

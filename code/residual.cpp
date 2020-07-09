@@ -182,6 +182,7 @@ int LevelScale4x4(int parameter, int i, int j)
 }
 void residual::Decode(uint8_t index)
 {
+    
     if(mb->is_intrapred())
         switch (mb->premode)
         {
@@ -195,6 +196,7 @@ void residual::Decode(uint8_t index)
     }
     Decode_Chroma(0);
     Decode_Chroma(1);
+
 }
 void residual::Decode_Chroma(int iCbCr)
 {
@@ -263,7 +265,7 @@ void residual::Decode_Intra4x4()
         {
             matrix c(4,4,0);
             Inverse4x4Scan(luma[0]->get_childBlock(i8x8)->get_childBlock(i4x4)->value, c);
-            c = ScalingAndTransform_Residual4x4Blocks(parser->pV->BitDepthY, qP, &c);
+            ScalingAndTransform_Residual4x4Blocks(parser->pV->BitDepthY, qP, &c);
             int row_cur = 0, col_cur = 0;
             mb->get_PosByIndex(4 * i8x8 + i4x4, row_cur, col_cur);
             // cout << "i8x8" << (int)i8x8 << " i4x4" << (int)i4x4 << endl << "row " << row_cur << "col " << col_cur << endl << c << endl;
@@ -282,13 +284,23 @@ void residual::Decode_Intra4x4()
 
 void residual::Decode_Intra16x16()
 {
+
     qP = mb->QPY_;
+
     matrix c(4, 4, 0);
     Inverse4x4Scan(luma[1]->value, c);
 
 
+
     //Intra_16x16 DC transform and scaling
-    c  = (*decoder->matrix_4x4Trans * c  * *decoder->matrix_4x4Trans);
+
+    // c  = (*decoder->matrix_4x4Trans * c  * *decoder->matrix_4x4Trans);
+    matrix tmp(4,4,0);
+    tmp += *decoder->matrix_4x4Trans;
+    tmp *= c;
+    tmp *= *decoder->matrix_4x4Trans;
+    c << tmp;
+    // //上面的优化对速度没有多少提高
 
     //原本使用符号重载的抽象公式，但是每次都需要值拷贝两次，所以拆开成多个公式，直接在左值做修改，
     if(qP >= 36)
@@ -307,49 +319,51 @@ void residual::Decode_Intra16x16()
 
     if(parser->debug->residual_transcoeff()) cout << c<< endl;
 
-    matrix* dcY = new matrix(4,4);
-    (*dcY) << c ;
+    matrix dcY(4,4);
+    dcY << c;//直接将c的数据交给dcY
 
-    array2d<matrix*>* lumaResidual = new array2d<matrix*>(4, 4, NULL);
+
+    //4x4个4x4矩阵
+    array2d<matrix*> lumaResidual(4, 4, NULL);
     for (uint8_t i = 0; i < 16; i++)
-    {lumaResidual->get_value_i(i) = new matrix(4,4,0);}
+    {lumaResidual.get_value_i(i) = new matrix(4,4,0);}
     
     for (uint8_t i = 0; i < 16; i++)
     {
-        matrix* des = lumaResidual->get_value_i(i);
+        matrix* des = lumaResidual.get_value_i(i);
         // cout << "des: " << des << endl;
         //write DC into residual
-        (*des)[0][0] = dcY->get_value_i(i);
+        (*des)[0][0] = dcY.get_value_i(i);
         //write AC into residual
-        for(uint8_t j = 0; j < 15; j++)
+
+        //提前进行了一次预处理得到luma的block(AC系数所在的block)
+        block* bl = luma[0]->get_childBlock(block4x4Index[i]/4)->get_childBlock(block4x4Index[i]%4);
         //填入AC系数的时候，AC系数不是按扫描顺序填入DC之后的位置的。而是按照4x4逆扫描。
         //也就是说：读取AC的值的时候按逆扫描来，填入的时候按照光栅扫描填入
-        {(*des).get_value_i(j + 1) = luma[0]->get_childBlock(block4x4Index[i]/4)->get_childBlock(block4x4Index[i]%4)->value[j];}
+        for(uint8_t j = 0; j < 15; j++)
+        {(*des).get_value_i(j + 1) = bl->value[j];}
         //inverse scan AC+DC coefficents
         Inverse4x4Scan((*des).data, (*des));
-        (*des) = ScalingAndTransform_Residual4x4Blocks(8, this->qP, des, 1);
+        ScalingAndTransform_Residual4x4Blocks(8, this->qP, des, 1);
         // cout << "i : " << (int)i << endl << (*des) << endl;
     }
     
-    delete dcY;
-    
 
-    //write 4x4 of 4x4 into out matrix(16x16)
+    //4x4个4x4矩阵写入到一个16x16矩阵中去
     matrix* result = new matrix(16, 16, 1);
     for (uint8_t i = 0; i < 16; i++)
     {
         for (uint8_t j = 0; j < 16; j++)
         {
-            (*result)[i][j] = (*(*lumaResidual)[i/4][j/4])[i%4][j%4];
+            (*result)[i][j] = (*lumaResidual[i/4][j/4])[i%4][j%4];
         }
     }
-    for (uint8_t i = 0; i < 16; i++){delete lumaResidual->get_value_i(i);}
-    delete lumaResidual;
-    //return result;
+    for (uint8_t i = 0; i < 16; i++){delete lumaResidual.get_value_i(i);}
+
     residual_Y = result;
 }
-
-matrix residual::ScalingAndTransform_Residual4x4Blocks(int BitDepth, int qP, matrix* c, uint8_t mode)
+//缩放变换一个4x4矩阵
+matrix& residual::ScalingAndTransform_Residual4x4Blocks(int BitDepth, int qP, matrix* c, uint8_t mode)
 {
     uint8_t i = 0, j = 0;
     //d_ij
@@ -413,10 +427,9 @@ matrix residual::ScalingAndTransform_Residual4x4Blocks(int BitDepth, int qP, mat
     r << h;//h的结果直接交给r并在r上运算
     r += 32;
     r >>= 6;
-    if(0)
-    cout << ">>residual: 16x16 Y out put:\n" << r << endl;
-
-    return r;
+    
+    (*c) << r;
+    return (*c);
 }
 void residual::Calc()
 {
@@ -427,23 +440,36 @@ void residual::ZeroAll()
 {
     //块置零
     //数据置零
-    if(mb->premode == Intra_16x16)
+    if(mb->is_intrapred())
     {
-        luma = new block*[2];
-        luma[1] = new block(16);
-        luma[0] = new block();
-        luma[0]->add_childBlock(4);
-        for (uint8_t i = 0; i < 4; i++){luma[0]->get_childBlock(i)->add_childBlock(4, 0);}
+        if(mb->premode == Intra_16x16)
+        {
+            luma = new block*[2];
+            luma[1] = new block(16);
+            luma[0] = new block();
+            luma[0]->add_childBlock(4);
+            for (uint8_t i = 0; i < 4; i++){luma[0]->get_childBlock(i)->add_childBlock(4, 0);}
 
+        }
+        else if(mb->premode == Intra_4x4)
+        {
+            luma = new block*[1];
+            luma[0] = new block();
+            luma[0]->add_childBlock(4);
+            for (uint8_t i = 0; i < 4; i++){luma[0]->get_childBlock(i)->add_childBlock(4, 0);}
+        }
+        else {
+            int a = 0;/*这里是8x8块8*/
+        }
     }
-    else if(mb->premode == Intra_4x4)
+    else
     {
         luma = new block*[1];
         luma[0] = new block();
         luma[0]->add_childBlock(4);
         for (uint8_t i = 0; i < 4; i++){luma[0]->get_childBlock(i)->add_childBlock(4, 0);}
     }
-    else {int a = 0;/*这里是8x8块8*/}
+    
 
     //亮度的块置零
     chroma = new block*[2];
@@ -534,9 +560,9 @@ void residual::residual_block_cavlc(block* bl, int syntaxValue, uint8_t startIdx
 void residual::residual_block_cabac(block* bl, int requestVlaue, uint8_t startIdx, uint8_t endIdx, uint8_t length)
 {
     int16_t i = 0, numCoeff = 0;
-    int32_t* coeffLevel                  = new int32_t[length];
-    uint8_t* significant_coeff_flag =      new uint8_t[length];
-    uint8_t* last_significant_coeff_flag = new uint8_t[length];
+    int32_t coeffLevel                  [length];
+    uint8_t significant_coeff_flag      [length];
+    uint8_t last_significant_coeff_flag [length];
     uint32_t a= 0 ,b = 0;
 
     if(length != 64 || parser->pV->ChromaArrayType == 3) 
@@ -546,8 +572,8 @@ void residual::residual_block_cabac(block* bl, int requestVlaue, uint8_t startId
         coeffLevel[i] = 0;
     if(bl->coded_block_flag)
     {
-        int32_t* coeff_abs_level_minus1  = new int32_t[length];
-        int32_t* coeff_sign_flag = new int32_t[length];
+        int32_t coeff_abs_level_minus1  [length];
+        int32_t coeff_sign_flag         [length];
         numCoeff = endIdx + 1 ;
         i = startIdx ;
         while(i < numCoeff - 1) 
@@ -561,7 +587,7 @@ void residual::residual_block_cabac(block* bl, int requestVlaue, uint8_t startId
             i++;
         }
         coeff_abs_level_minus1[numCoeff - 1] = parser->read_ae(0x64000 + requestVlaue + (((int)a) << 24) + (((int)b )<< 20));
-        coeff_sign_flag[numCoeff - 1] = parser->read_ae(65);//use bypass decode
+        coeff_sign_flag[numCoeff - 1]        = parser->read_ae(65);//use bypass decode
         coeffLevel[numCoeff - 1] = (coeff_abs_level_minus1[numCoeff - 1] + 1) * (1 - 2 * coeff_sign_flag[numCoeff - 1]) ;
         if(coeffLevel[numCoeff - 1] == 1 || coeffLevel[numCoeff - 1] == -1)a++;
         if(coeffLevel[numCoeff - 1] > 1  || coeffLevel[numCoeff - 1] <  -1)b++;
@@ -569,15 +595,15 @@ void residual::residual_block_cabac(block* bl, int requestVlaue, uint8_t startId
             if(significant_coeff_flag[i])
             { 
                 coeff_abs_level_minus1[i] = parser->read_ae(0x64000 + requestVlaue + (((int)a) << 24) + (((int)b )<< 20));  
-                coeff_sign_flag[i] = parser->read_ae(65);  
+                coeff_sign_flag[i]        = parser->read_ae(65);  
                 coeffLevel[i] = (coeff_abs_level_minus1[i] + 1) * (1 - 2 * coeff_sign_flag[i]);
 
                 if(coeffLevel[i] == 1 || coeffLevel[i] == -1)a++;
                 if(coeffLevel[i] > 1  || coeffLevel[i] <  -1)b++;
             }
         }
-        delete[](int32_t*) coeff_abs_level_minus1; coeff_abs_level_minus1 = NULL;
-        delete[](int32_t*) coeff_sign_flag       ; coeff_sign_flag = NULL;
+        // delete[](int32_t*) coeff_abs_level_minus1; coeff_abs_level_minus1 = NULL;
+        // delete[](int32_t*) coeff_sign_flag       ; coeff_sign_flag = NULL;
     }
     for (uint16_t i = 0; i < length; i++) {bl->set_blockValue(i, coeffLevel[i]);}
 
@@ -587,9 +613,9 @@ void residual::residual_block_cabac(block* bl, int requestVlaue, uint8_t startId
         for (uint16_t i = 0; i < length; i++) {printf(" index %2d, value : %d\n", i, coeffLevel[i]);}
     }
 
-    delete[] coeffLevel                 ;
-    delete[] significant_coeff_flag     ;
-    delete[] last_significant_coeff_flag;
+    // delete[] coeffLevel                 ;
+    // delete[] significant_coeff_flag     ;
+    // delete[] last_significant_coeff_flag;
 }
 residual::residual(macroblock* ma, Parser* pa)
 {
@@ -612,17 +638,18 @@ residual::~residual()
         Sdelete_s(luma[1]);
         Sdelete_s(luma[0]);
         Sdelete_l(luma);
-        Sdelete_l(chroma);
 
     }
-    else if(mb->premode == Intra_4x4)
+    else if(mb->premode == Intra_4x4 || mb->is_interpred())
     {
         Sdelete_s(luma[0]);
         Sdelete_l(luma);
-        Sdelete_l(chroma);
     }
     else {int a = 0;/*这里是8x8块8*/}
 
+    Sdelete_s(chroma[0]);
+    Sdelete_s(chroma[1]);
+    Sdelete_l(chroma);
     Sdelete_s(residual_Y);
     Sdelete_s(residual_U);
     Sdelete_s(residual_V);

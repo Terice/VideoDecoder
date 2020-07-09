@@ -437,6 +437,7 @@ picture::~picture()
     {
         Sdelete_s(mb_inpic->get_value_i(i));
     }
-    Sdelete_s(out_CharMatrix);
     Sdelete_s(mb_inpic);
+    
+    Sdelete_s(out_CharMatrix);
 }

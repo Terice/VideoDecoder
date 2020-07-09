@@ -65,6 +65,8 @@ public:
     bool nal_info()                {if(control_all) return de_nal_info         ;    else return false;};
 
     double get_RunTime();
+    //在这个函数所在的地方设置一个时间戳
+    void set_TimeFlag(){upr_t = clock();};
     double de_DltTime(const char* stage);
     Debug(const char*);
     ~Debug();

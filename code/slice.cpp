@@ -268,11 +268,6 @@ void Slice::PraseSliceDataer()
         mb->position_x = x_cur;
         mb->position_y = y_cur;
 
-    // static bool state = false;
-        // if(index == 43 && x_cur == 0 && y_cur == 12)
-        //     parser->debug->set_control_all(true);
-        // if(index > 43)
-        //     exit(0);
         mb->idx_inpicture = index_MbInPicture;//index_MbInPicture这个变量不应该设置在slice里面，现在还没有改过来
         //clac current next macroblock position
         index_MbInPicture++;
@@ -323,9 +318,12 @@ void Slice::PraseSliceDataer()
                 ps->mb_field_decoding_flag = parser->read_ae(12);//1a
             else ps->mb_field_decoding_flag = ps->field_pic_flag;
             //解析宏块数据
+            // parser->debug->de_DltTime("mb start");
             mb->Parse(0);
+            // parser->debug->de_DltTime("mb parser");
             //所有的宏块都需要解码、重建图像
             mb->Calc(0);
+            // parser->debug->de_DltTime("mb dataer");
         }
         else
         {
@@ -427,7 +425,6 @@ Slice::~Slice()
             Sdelete_l(pw->chroma_offset_l0[i]);
 
             Sdelete_l(pw->chroma_offset_l0);
-
         }
         if(pw->chroma_weight_l1)
         {            

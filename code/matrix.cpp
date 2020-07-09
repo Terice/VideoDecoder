@@ -119,13 +119,11 @@ matrix operator+(const matrix& left, int right)
     }
     return result;
 }
-matrix operator*(const matrix& left, const matrix& right)
+
+
+matrix& matrix::operator*=(matrix& right)
 {
-#if DE_MATRIX_START
-    cout << ">>matrix: start value: 1 is left:\n";
-    cout << left;
-    cout << right << endl;
-#endif
+    matrix& left = (*this);
     int r = left.x_length, c = right.y_length;
     matrix result(r, c, 0);
     if(left.y_length != right.x_length) return left;
@@ -134,26 +132,40 @@ matrix operator*(const matrix& left, const matrix& right)
         int result_cur = 0;
         for(size_t r_cur = 0; r_cur < r; r_cur++)
         {
-            result_cur = 0;
+            for (uint8_t cur = 0; cur < right.x_length; cur++)
+            {
+                result_cur = left[r_cur][cur];
+                for(size_t c_cur = 0; c_cur < c; c_cur++)
+                {
+                    result[r_cur][c_cur] += result_cur * right[cur][c_cur];
+                }
+            }
+        }
+
+        left << result;
+        
+        return left;
+    }
+}
+matrix operator*(const matrix& left, const matrix& right)
+{
+    int r = left.x_length, c = right.y_length;
+    matrix result(r, c, 0);
+    if(left.y_length != right.x_length) return left;
+    else 
+    { 
+        int result_cur = 0;
+        for(size_t r_cur = 0; r_cur < r; r_cur++)
+        {
             for(size_t c_cur = 0; c_cur < c; c_cur++)
             {
-                result_cur = 0;
                 for (uint8_t cur = 0; cur < right.x_length; cur++)
                 {
-                    result_cur += left[r_cur][cur] * right[cur][c_cur];
-#if DE_MATRIX_SINGLEVALUE
-                    printf(">>matrix: Row: %d, Colomn:%d, value %5dx%-5d = %5d\n", r_cur, c_cur, left[r_cur][cur], right[cur][c_cur], result_cur);
-#endif
+                    result_cur = left[r_cur][cur] * right[cur][c_cur];
                 }
                 result[r_cur][c_cur] = result_cur;
             }
-#if DE_MATRIX_SINGLEVALUE
-                    printf(">>matrix:4x4matrix break line--------------------\n");
-#endif
         }
-#if DE_MATRIX_RESULT
-        std::cout << ">>matrix:result:\n" << result;
-#endif
         return result;
     }
 }

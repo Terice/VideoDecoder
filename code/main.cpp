@@ -10,21 +10,20 @@ using namespace std;
 #include "Debug.h"
 #include "NAL.h"
 
-#define FILEPATH "../../../../resource/fox (copy).264"
+#define FILEPATH "../../../../resource/fox.264"
 
 int main()
 {
     FILE* fp;
     
     if((fp = fopen(FILEPATH, "r")) == NULL) exit(-1);
-    // fseek(fp, 0x2FFL,SEEK_SET);
 
     //这三个对象分别是Debug器，解析器，解码器
-    Debug debug("./debug_config");
-    Parser parser(fp, &debug);
-    Decoder decoder;
+    Debug debug("./debug_config");//Debug从配置的lua文件中读入控制变量
+    Parser parser(fp, &debug);//parser从fp中读入字节数据，并且带上debug对象
+    Decoder decoder;//Decoder用来做图像管理等，在nal运行的时候用到
 
-    debug.de_DltTime("start");
+    debug.set_TimeFlag();
     int i = 0;
     //如果找到了下一个NAL，那么就解码他，否则退出循环
     while(parser.find_nextNAL())
@@ -32,8 +31,7 @@ int main()
         NAL nal(&parser, &decoder);
         nal.decode();
 
-        cout << ">>frame:" << i << endl;
-        debug.de_DltTime("");
+        cout << ">>main : nal" << i << endl;
         i++;
     }
 

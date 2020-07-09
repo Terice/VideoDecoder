@@ -12,13 +12,18 @@ DE_CABAC_RESULT                  = 0
 DE_RESIDUAL_CABAC_RESULT         = 0
 --打印残差的变换系数
 DE_RESIDUAL_TRANSCOEFF           = 0
+
+
 --宏块信息和所有打印的控制
 DE_MB                            = 0
+
+
 --残差
 --打印 Y Cb Cr 的残差
-DE_RESIDUAL_RESULT               = 0
 
 --强制全部打印
+DE_RESIDUAL_RESULT               = 0
+
 DE_RESIDUAL_RESULT_Y             = 0
 DE_RESIDUAL_RESULT_Cr            = 0
 DE_RESIDUAL_RESULT_Cb            = 0
@@ -47,7 +52,9 @@ DE_INTER_MOVEVECTOR              = 0
 --最后的图像字符画
 DE_PIC_TERMINATECHAR             = 1
 
+--所有的和时间有关的打印
 DE_TIMER                         = 0
+--NAL信息的打印
 DE_NAL_INFO                      = 0
 function get_conf()
     print(">>script:")

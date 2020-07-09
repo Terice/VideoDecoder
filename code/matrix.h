@@ -22,6 +22,7 @@ public:
     matrix& operator+=(const matrix&);
     matrix& operator+=(int);
     matrix& operator*=(int);
+    matrix& operator*=(matrix& right);
     matrix& operator/=(int);
     friend matrix& operator>>=(matrix& left,int right);
     friend matrix& operator<<=(matrix& left,int right);

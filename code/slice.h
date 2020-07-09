@@ -70,7 +70,7 @@ typedef struct PREDWEIGHT
     uint8_t luma_log2_weight_denom             = 0;
     uint8_t chroma_log2_weight_denom           = 0;
     uint8_t luma_weight_l0_flag                = 0;
-    int16_t *luma_weight_l0                     = NULL;
+    int16_t *luma_weight_l0                    = NULL;
     int16_t *luma_offset_l0                    = NULL;
     uint8_t chroma_weight_l0_flag              = 0;
     int16_t **chroma_weight_l0                 = NULL;
@@ -88,6 +88,10 @@ typedef struct PREDWEIGHT
     int O_0C                                   = 0;
     int O_1c                                   = 0;
 }PredWeight;
+class macroblock;
+class NAL;
+class Parser;
+class Decoder;
 
 class Slice
 {
@@ -95,21 +99,21 @@ private:
     Slicetype type;
     // cabac cabacCore;
     int index;
-    class Slice* next;
-    class Parser* parser;
-    class macroblock* cur_macroblcok;
-    class macroblock* head_macroblock;
+    Slice* next;
+    Parser* parser;
+    macroblock* cur_macroblcok;
+    macroblock* head_macroblock;
     void Calc_POC();
 public:
-    class Decoder* decoder;
-    class NAL* uppernal;
+    Decoder* decoder;
+    NAL* uppernal;
     SliceParametersets* ps;//SPS and PPS
     PredWeight* pw;
     Slicetype get_type(){return type;};
     int get_index(){return index;};
-    class macroblock* get_curMB();
+    macroblock* get_curMB();
     void setpv(struct PARAMETERSV* a);
-    class macroblock* get_mbUsingIdInSlice(int32_t);
+    macroblock* get_mbUsingIdInSlice(int32_t);
     ~Slice();
     Slice(Parser* parser, Decoder* deocder, NAL* nal);
     //

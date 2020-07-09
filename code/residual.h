@@ -32,7 +32,7 @@ private:
     void Parser_Chroma();
     //if luma of intra_16x16 or chroma residual 
     //mode 的意思：如果是16x16帧内预测或者c是色度的矩阵，那么这个值传1，否则不传
-    class matrix ScalingAndTransform_Residual4x4Blocks(int BitDepth, int qP, class matrix* c_ij, uint8_t mode = 0);
+    class matrix& ScalingAndTransform_Residual4x4Blocks(int BitDepth, int qP, class matrix* c_ij, uint8_t mode = 0);
     //syntaxValue的值：16^2 作为一个十进制数指定当前用cat后缀的句法元素是哪种解析模式，一共12种（查表）
     //最后一位16^1 的低四位指当前的块索引
     void (residual::*residual_block)(class block* bl, int syntaxValue, uint8_t startIdx, uint8_t endIdx, uint8_t length);

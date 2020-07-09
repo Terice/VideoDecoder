@@ -33,6 +33,10 @@ void macroblock::Calc(int mode)
             this->ConstructPicture();
         }
     }
+    else if(type == I_PCM)
+    {
+        
+    }
     else //if(is_interpred())
     {
         //帧间也是4x4解码残差 
@@ -134,6 +138,9 @@ void macroblock::Init0(int mode)
 }
 void macroblock::Parse(int mode)
 {
+    Debug* de = parser_g->debug;
+    de->set_TimeFlag();
+
     mb_skip_flag = up_slice->ps->mb_skip_flag;
     type = (MbTypeName)parser_g->read_ae(21);
     mb_type = (uint8_t)type;
@@ -157,6 +164,8 @@ void macroblock::Parse(int mode)
             pcm_sample_luma[i] = parser_g->read_un(parser_g->pV->BitDepthY);
         for(unsigned i = 0; i < 2 * (8 * 8); i++) 
             pcm_sample_chroma[i]= parser_g->read_un(parser_g->pV->BitDepthC);
+
+        int a =0;
     }
     else
     {
@@ -416,7 +425,10 @@ void macroblock::Parse(int mode)
             CodedBlockPatternLuma = macroBlockInfo_I_slice[mb_type][4];
         }
         //计算残差
+        de->set_TimeFlag();
         Calc_residual();
+        de->de_DltTime("re end");
+        // exit(0);
     }
 }
 void macroblock::Calc_residual()
@@ -436,6 +448,7 @@ void macroblock::Calc_residual()
         else  TransformBypassModeFlag = 0;
         
         //然后解残差
+        
         re->Parse(0);
         re->Decode(0);
     }
@@ -1341,7 +1354,7 @@ macroblock::~macroblock()
 
     Sdelete_s(re);
 
-    Sdelete_s(sub_mb_type);
+    Sdelete_l(sub_mb_type);
     Sdelete_l(ref_idx_l0 );
     Sdelete_l(ref_idx_l1 );
 

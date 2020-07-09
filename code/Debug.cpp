@@ -111,10 +111,13 @@ double Debug::get_RunTime()
 double Debug::de_DltTime(const char* stage)
 {
     double result = 0.0;
-    cur_t = clock();
-    result = (double)(cur_t - upr_t)/CLOCKS_PER_SEC;
-    upr_t = cur_t;
-    printf(">>Debug: RunTime: %f,   stage:%s\n", result, stage);
+    if(de_timer)
+    {
+        cur_t = clock();
+        result = (double)(cur_t - upr_t)/CLOCKS_PER_SEC;
+        upr_t = cur_t;
+        printf(">>Debug: RunTime: %fs,   stage:%s\n", result, stage);
+    }
     return result;
 }
 Debug::~Debug()
