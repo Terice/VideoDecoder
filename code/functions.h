@@ -3,6 +3,7 @@
 
 #include "staticcharts.h"
 
+//指针类型有两个括号
 //safe delete single a
 #define Sdelete_s(a) {if(a != NULL) delete a;a = NULL;}
 //safe delete array a
@@ -15,6 +16,8 @@ inline uint Abs(int v){return v >= 0 ? v : (uint)((-1)*v);}
 inline int8_t Sig(int v){return v >= 0 ? 1 : -1;};
 inline int MinPositive(int x, int y){return (x > 0 && y > 0) ? Min(x, y) : Max(x, y);}
 inline int SixTapFliter(int a, int b, int c, int d, int e, int f){return a - 5 * b + 20 * c + 20 * d - 5 * e + f;}
+
+
 
 class macroblock;
 bool Get_PredFlag(macroblock* m, uint8_t mbPartIdx, uint8_t flag);

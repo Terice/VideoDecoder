@@ -76,10 +76,7 @@ uint32_t cabac::Decode(int syntaxelements)
     else if(syntaxelements == 65) result = DecodeValueUsingCtxIdx(0, 1);
     else if(syntaxelements == 276) result = DecodeValueUsingCtxIdx(276, 0);
 
-
     return result;
-
-
 }
 bool cabac::DecodeValueUsingCtxIdx(uint16_t ctxIdx_value, uint8_t bypassFlag_value)
 {
@@ -236,7 +233,7 @@ int InBinarizationSub(uint16_t result, int binIdx, const uint8_t binarization_ch
     int re = -1;
     uint8_t chart_length = 0;
 
-    if(binarization_chart == binarization_submbtype_in_PandSP) chart_length = 5;
+    if(binarization_chart == binarization_submbtype_in_PandSP) chart_length = 4;
     else /*if(binarization_chart == binarization_submbtype_in_B)*/ chart_length = 13;
 
     for(size_t i = 0; i < chart_length; i++)

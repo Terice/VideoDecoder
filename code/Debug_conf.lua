@@ -55,8 +55,8 @@ DE_PIC_TERMINATECHAR             = 1
 --所有的和时间有关的打印
 DE_TIMER                         = 0
 --NAL信息的打印
-DE_NAL_INFO                      = 0
-function get_conf()
+DE_NAL_INFO                      = 1
+get_conf = function ()
     print(">>script:")
     print("         DE_CABAC_STATE          :"..DE_CABAC_STATE          ) 
     print("         DE_CABAC_BIN            :"..DE_CABAC_BIN            ) 
@@ -101,10 +101,10 @@ function get_conf()
     end
     return
         DE_CABAC_STATE, DE_CABAC_BIN, DE_CABAC_RESULT, DE_RESIDUAL_TRANSCOEFF, DE_RESIDUAL_CABAC_RESULT,
-        DE_MB, 
+        DE_MB,
         DE_RESIDUAL_RESULT_Y, DE_RESIDUAL_RESULT_Cr, DE_PREDICTION_RESULT_Cr,
         DE_CONSPIC_RESULT_Y , DE_CONSPIC_RESULT_Cb , DE_CONSPIC_RESULT_Cr,
-        DE_CONSPIC_RESULT_Y , DE_CONSPIC_RESULT_Cb , DE_CONSPIC_RESULT_Cr, 
+        DE_CONSPIC_RESULT_Y , DE_CONSPIC_RESULT_Cb , DE_CONSPIC_RESULT_Cr,
         DE_INTER_MOVEVECTOR,
         DE_PIC_TERMINATECHAR,
         DE_TIMER,

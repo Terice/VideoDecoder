@@ -79,10 +79,9 @@ block::~block()
     {
         for(size_t i = 0; i < this->childBlockLength; i++) 
         {
-            if(this->childBlock && this->childBlock[i])
             Sdelete_s(this->childBlock[i]);
         }
-        Sdelete_l(childBlock);
     }
+    Sdelete_l(childBlock);
     Sdelete_l(value);
 }

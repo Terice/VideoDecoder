@@ -51,7 +51,7 @@ bool picture::chs_MbToOutmatrix()
 {
     //可以指定的字符画宽高比例
     int hei_scal = 4;
-    int wid_scal = 1;
+    int wid_scal = 2;
     //
     out_CharMatrix = new array2d<char>(height_mb * 16 / hei_scal + 1, width_mb * 16 / wid_scal + 1, 0);
     char tmp = 0;
@@ -419,25 +419,30 @@ picture::picture(int widthInMB, int heightInMB, int type)
     width_mb = widthInMB;
 
 
+    state_Ref = Nun_ref;
+    POC = 0;
     PicNum = 0;
+    LongTermPicNum = -1;
+
     FrameNum = 0;
     LongTermIdx = -1;
-    LongTermPicNum = -1;
     FrameNumWrap = 0;
     TopFieldOrderCnt = 0;
     BottomFieldOrderCnt = 0;
     PicOrderCntMsb = 0;
     memory_management_control_operation = 0;
-    state_Ref = 0;
     LongTermFrameIdx = -1;
 }
 picture::~picture()
 {
-    for (uint i = 0; i < height_mb * width_mb; i++)
+    if(mb_inpic)
     {
-        Sdelete_s(mb_inpic->get_value_i(i));
+        for (uint i = 0; i < height_mb * width_mb; i++)
+        {
+            Sdelete_s(mb_inpic->get_value_i(i));
+        }
+        Sdelete_s(mb_inpic);
     }
-    Sdelete_s(mb_inpic);
     
     Sdelete_s(out_CharMatrix);
 }

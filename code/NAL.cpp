@@ -14,24 +14,18 @@ using std::cout;
 
 bool NAL::decode()
 {   
-    if(parser == NULL) 
-    {
-        cout << "no res " << endl;
-        return false;
-    }
     forbidden_zero_bit = parser->read_un(1);
     nal_ref_idc = parser->read_un(2);
     nal_unit_type = parser->read_un(5);
     type = (NALtype)nal_unit_type;
 
-
     switch (type)
     {
-        case IDR:decode_PIC();break;
         case Non_IDR:decode_PIC();break;
-        case SPS:decode_SPS();break;
+        case IDR:decode_PIC();break;
         case PPS:decode_PPS();break;
-        default:break;
+        case SPS:decode_SPS();break;
+        default:printf("error or nowrite nal");break;
     }
     return true;
 }
@@ -114,7 +108,7 @@ void NAL::decode_SPS()
     parser->pV->MaxFrameNum         = (uint32_t)pow(2, data->log2_max_frame_num_minus4 + 4);
     parser->pV->PicWidthInMbs       = data->pic_width_in_mbs_minus1 + 1;
     parser->pV->PicHeightInMapUnits = data->pic_height_in_map_units_minus1 + 1;
-    parser->pV->PicHeightInMbs       = data->pic_height_in_map_units_minus1 + 1;
+    parser->pV->PicHeightInMbs      = data->pic_height_in_map_units_minus1 + 1;
     parser->pV->FrameHeightInMbs    = ( 2 - data->frame_mbs_only_flag ) * parser->pV->PicHeightInMapUnits;
     parser->pV->PicSizeInMapUnits   = parser->pV->PicWidthInMbs *parser->pV->PicHeightInMapUnits;
     
@@ -186,109 +180,129 @@ void NAL::decode_PPS()
     {
         data->transform_8x8_mode_flag                                = parser->read_un(1);//
     }
-
-    
     this->data = data;
     
 }
 uchar** NAL::decode_PIC()
 {
+    //
     //如果是IDR，清空所有队列的所有pic指针，释放所有的pic内存
     if(type == IDR) decoder->clear_DecodedPic();
 
     picture* picture_cur = new picture(parser->pS->sps->pic_width_in_mbs_minus1+1, parser->pS->sps->pic_height_in_map_units_minus1+1, type == IDR ? 1 : 0);
     this->pic = picture_cur;
+    //设置解码器的当前图像，用于MMOC中的CurPicNum
+    decoder->set_CurrentPic(picture_cur);
 
-    
+    //设置CABAC的解码对象
     parser->cabac_core->set_pic(picture_cur);
 
+    //初始化一个slice之后就解码头部，
+    //（slcie头没有依赖的数据，可以先解）
     Slice* sl1 = new Slice(this->parser, this->decoder ,this);
+    decoder->set_CurSlcie(sl1);
     sl1->PraseSliceHeader();
+    Slicetype sl1_type = sl1->get_type();
+    
+    if(sl1->get_index() == 16)
+        int a = 0;
     
 
-    //slice头只有一个，所以slice和pic其实有很多重合的属性，但是比较关键的是属性应该是位于pic中而不是slice中的
-    
     //每次解完头，把frame_num这个句法赋值给pic，然后用decoder去解picture numbers
     pic->FrameNum = sl1->ps->frame_num;
-    
     //解码picture numbers
-    decoder->calc_PictureNum(parser->pV->MaxFrameNum, sl1->ps->field_pic_flag);
-    
-    decoder->ctrl_Memory();
-    //然后再把当前的pic加入到已经完成解码的队列中(虽然当前pic还没有完全解码)
-    decoder->add_DecodedPic(pic);
-    //初始化参考列表，把图片加入到相应的参考列表中去
-    Slicetype sl1_type = sl1->get_type();
+    decoder->calc_PictureNum();
 
+    //初始化参考列表，把pic_current指针加入到相应的参考列表中去
     //解I帧不需要参考，只需要标记
-    //只是排序的话，按照长期短期索引来排序就行了把，
-
-
     //初始化参考表(根据上一次的标记)
     if(sl1_type == P || sl1_type == SP || sl1_type == B)
-    decoder->init_RefPicList(sl1_type);
+    decoder->init_RefPicList();
 
+    //修改
+    decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l0_active_minus1, true);
 
+    //至此参考列表建立完成
+    //去掉解码队列中无用的帧
+    decoder->ctrl_Memory();
 
+    //slice数据块解码依赖于参考列表所以放在参考列表建立完之后
     sl1->PraseSliceDataer();
-    //片解码完毕，宏块已经入pic
-    
+    //片解码完毕，宏块在pic上
 
+    decoder->add_DecodedPic(pic);
+
+    //图像解码完毕，pic进入解码队列
+    //decoder的pic_current指针指向这个解码完毕的pic
     
     //解码完毕需要对当前的pic进行标记，
-    //在下一次解码的时候会重排序和修改，而不是这里
-    //这里只是标记而已
+    //在下一次解码的时候会初始化，重排序和修改，而不是这里
     if(nal_ref_idc != 0)
     {
-        decoder->add_ReferenPic(pic);
-        //I：所有的片已经解码
+        //第一步：所有的片已经解码
         //不考虑场的问题，到这里就已经是完成解码了
-        //II
+
+        //第二步：参考队列中的pic的标记
         if(pic->is_IDR())
         {
-            //I第一步所有参考pic标记为不用于参考
+            //I所有参考pic标记为不用于参考
             //II
             if(sl1->ps->long_term_reference_flag == 0)
             {
                 decoder->MaxLongTermFrameIdx = -1;
-                pic->state_Ref += 1;
+                pic->state_Ref = Ref_short;
             }
             else
             {
                 decoder->MaxLongTermFrameIdx = 0;
-                pic->state_Ref += 10;
+                pic->state_Ref = Ref_long;
                 pic->LongTermFrameIdx = 0;
             }
         }
-        else 
+        else
         {
-            //标记的时候
+            //标记
             if(sl1->ps->adaptive_ref_pic_marking_mode_flag == 0)
-            {/*滑窗标记*/}
-            else
-            {/*自适应标记*/}
+            //滑窗标记操作：帧队列满那么去掉最小PicNum的pic
+            {
+                decoder->ctrl_FIFO(parser->pS->sps->max_num_ref_frames);
+                /*滑窗标记*/
+            }
+            else//自适应标记在slice头就会完成，
+            {
+                decoder->ctrl_MMOC();
+                /*自适应标记*/
+            }
         }
-        //III
-        //进入到这里的pic都是需要标记和参考的长期帧
-        //如果不是由内存控制标记标记的长期帧，那么标记为短期帧
-        //内存控制标记的长期帧有着IDR的作用，
-        //其他一律标记为短期帧
-        if(!pic->is_IDR() && !(pic->state_Ref / 10 != 1 && pic->memory_management_control_operation == 6))
+
+        //第三步，当前pic的标记
+        //自适应内存标记6号就是标记当前pic
+        //如果不是     由内存控制标记6标记的长期帧     ，
+        //那么标记为短期帧
+        if(!pic->is_IDR() && !(pic->is_UsedForLong() && pic->memory_management_control_operation == 6))
         {
-            pic->state_Ref += 1;
+            pic->state_Ref = Ref_short;
         }
+
+        //标记完毕，加入到参考队列中并分别加入参考表
+        decoder->add_ReferenPic(pic);
     }
+
     if(sl1_type != B) 
     {
+        //像素字符化并输出pic
         if(parser->debug->pic_terminalchar())
         {
-            //像素字符化
             if((type == IDR || type == Non_IDR) && sl1_type != B)
             {
                 pic->chs_MbToOutmatrix();
-                cout << (*pic) << endl;
+                std::cout << (*pic) << std::endl;
             }
         }
+        //输出:
+        //nal的基本信息，
+        //参考队列
+        //slice的基本信息
         if(parser->debug->nal_info())
         {
             printf(">>nal  : type: %s, ref_idc: %2d, \n", type==IDR?"IDR":"NONE_IDR", nal_ref_idc);
@@ -296,9 +310,6 @@ uchar** NAL::decode_PIC()
             printf(">>slice: type: %2d, index: %2d\n", sl1->get_type(), sl1->get_index());
             printf("----nal divide line----\n\n");
         }
-    }
-    else
-    {
     }
     
     Sdelete_s(sl1);

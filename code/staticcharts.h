@@ -1273,7 +1273,7 @@ static const uint8_t macroBlockInfo_B_slice[24][6]=
     { B_8x8         , 4     , Pred_NU, Pred_NU,  8 ,  8  },
     { B_Skip        , 4     , Direct , Pred_NU,  8 ,  8  },
 };
-
+//第一个索引是子块的类型，第二个索引是该子块的信息
 static const uint8_t subMbInfo[18][6] =
 {//                 |NumSubMbPart
     { P_L0_8x8         , 1,  Pred_L0,  8,  8, na_mb},               //0  

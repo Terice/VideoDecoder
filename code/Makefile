@@ -6,6 +6,7 @@ LDFLAGS+= -llua5.1
 #target=../bin/a
 target=a
 
+
 $(target):main.cpp $(ofile)/bitsbuf.o \
  $(ofile)/NAL.o\
  $(ofile)/slice.o \
@@ -15,9 +16,10 @@ $(target):main.cpp $(ofile)/bitsbuf.o \
  $(ofile)/matrix.o $(ofile)/Decoder.o $(ofile)/Debug.o \
  $(ofile)/functions.o 
 	$(cpi) -g        $^    -o  $@  $(LDFLAGS)
-
 $(ofile)/%.o:%.cpp
 	$(cpi) $(CFLAGS) $^    -o  $@
+
+
 clean:
 	rm $(ofile)/*.o ./a
 	rm $(bin)/a

@@ -47,7 +47,6 @@ void Slice::PraseSliceHeader()
             ps->delta_pic_order_cnt[1]       = parser->read_se();
     }
 
-
     if(ps->pps->redundant_pic_cnt_present_flag){
         ps->redundant_pic_cnt                = parser->read_ue();
     }
@@ -64,7 +63,7 @@ void Slice::PraseSliceHeader()
             if(type == B)
                 ps->num_ref_idx_l1_active_minus1 = parser->read_ue();
         }
-        else 
+        else //不重载的时候使用默认的值
         {
             ps->num_ref_idx_l0_active_minus1 = parser->pS->pps->num_ref_idx_l0_default_active_minus1;
             ps->num_ref_idx_l1_active_minus1 = parser->pS->pps->num_ref_idx_l1_default_active_minus1;
@@ -75,12 +74,20 @@ void Slice::PraseSliceHeader()
     if(ps->slice_type % 5 != 2 && ps->slice_type % 5 != 4 ){ 
         ps->ref_pic_list_modification_flag_l0= parser->read_un(1);
         if(ps->ref_pic_list_modification_flag_l0) 
-        do { 
+        do {
+            std::vector<int>& mods = decoder->opra_ModS;
             ps->modification_of_pic_nums_idc = parser->read_ue();
-            if(ps->modification_of_pic_nums_idc == 0 || ps->modification_of_pic_nums_idc == 1 ) 
+            mods.push_back(ps->modification_of_pic_nums_idc);
+            if(ps->modification_of_pic_nums_idc == 0 || ps->modification_of_pic_nums_idc == 1 )
+            {
                 ps->abs_diff_pic_num_minus1  = parser->read_ue();
+                mods.push_back(ps->abs_diff_pic_num_minus1);
+            }
             else if(ps->modification_of_pic_nums_idc == 2 ) 
+            {
                 ps->long_term_pic_num        = parser->read_ue();
+                mods.push_back(ps->long_term_pic_num);
+            }
         } while(ps->modification_of_pic_nums_idc != 3 );
     }
     //B的重排序
@@ -179,21 +186,37 @@ void Slice::PraseSliceHeader()
             {
                 //自适应控制标记是一系列操作，而不是某一个操作
                 int i = 0;
-                do { 
+                do {
+                    std::vector<int>& MMOC = decoder->opra_MMOC;
                     ps->memory_management_control_operation                 = parser->read_ue();
-                    uppernal->pic->memory_management_control_operation = ps->memory_management_control_operation;
-                    //
+                    MMOC.push_back(ps->memory_management_control_operation);
                     //
                     if(ps->memory_management_control_operation == 1 || \
-                    ps->memory_management_control_operation == 3)
+                       ps->memory_management_control_operation == 3)        
+                        //和这个slice的pic相差的PicNum
+                    {
                         ps->difference_of_pic_nums_minus1                   = parser->read_ue();
+                        MMOC.push_back(ps->difference_of_pic_nums_minus1);
+                    }
                     if(ps->memory_management_control_operation == 2) 
+                        //需要移除的长期参考帧索引
+                    {
                         ps->long_term_pic_num                               = parser->read_ue();  
+                        MMOC.push_back(ps->long_term_pic_num);
+                    }
                     if(ps->memory_management_control_operation == 3 || \
-                    ps->memory_management_control_operation == 6) 
+                       ps->memory_management_control_operation == 6) 
+                        //需要注册的长期参考帧索引
+                    {
                         ps->long_term_frame_idx                             = parser->read_ue();
+                        MMOC.push_back(ps->long_term_frame_idx);
+                    }
                     if(ps->memory_management_control_operation == 4)
+                        //最大的长期参考索引
+                    {
                         ps->max_long_term_frame_idx_plus1                   = parser->read_ue();
+                        MMOC.push_back(ps->max_long_term_frame_idx_plus1);
+                    }
                 }while(ps->memory_management_control_operation != 0);
             }
             //否则就是滑窗标记

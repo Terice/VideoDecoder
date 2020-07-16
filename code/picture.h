@@ -19,7 +19,10 @@ private:
     //输出字符画数组
     array2d<char>* out_CharMatrix;
 public:
+
+    RefState state_Ref;
     int DecNum;
+
     //FrameNum相关变量
     int PicNum;
     int FrameNum;
@@ -27,20 +30,25 @@ public:
     int LongTermPicNum;
     int FrameNumWrap;
     //POC相关变量
+    int POC;
     int TopFieldOrderCnt;
     int BottomFieldOrderCnt;
     int PicOrderCntMsb;
     //内存控制标志
     uint8_t memory_management_control_operation;
     //这个值用来指明当前pic的预测状态， 用十进制位来表示
-    //-1表示不用于预测，-10表示不存在，1 表示短期预测 10表示用于长期预测，
-    int state_Ref;
+    
     int LongTermFrameIdx;
-    int get_POC(){return Min(TopFieldOrderCnt, BottomFieldOrderCnt);}
-    bool is_IDR(){return type == 1 ? true : false;};
-    bool is_UsedForShort(){return state_Ref % 10 == 1? true : false;};
-    bool is_UsedForLong (){return state_Ref / 10 == 1 ? true : false;};
-    bool is_UsedForRef  (){return state_Ref > 0 ? true : false;};
+    int get_POC()          {return Min(TopFieldOrderCnt, BottomFieldOrderCnt);}
+    bool is_IDR()          {return type == 1 ? true : false;};
+    bool is_UsedForShort() {return state_Ref == Ref_short? true : false;};
+    bool is_UsedForLong () {return state_Ref == Ref_long? true : false;};
+    bool is_UsedForRef  () {return(state_Ref == Ref_long || state_Ref == Ref_short) ? true : false;};
+    void set_UseForShort()      {state_Ref =  Ref_short ;};
+    void set_UseForLong(int a)  {state_Ref =  Ref_long  ;LongTermPicNum = a;};
+    void set_NotUseForRef()     {state_Ref =  Nun_ref   ;};
+    void set_NotExist()         {state_Ref =  Nul_exist ;};
+    void is_Exist(){};
     //add a macroblock into the pic
     bool add_MB(int x, int y, macroblock* mb_ToAdd);
     

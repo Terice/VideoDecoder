@@ -29,6 +29,7 @@ MbPartPredMode Get_MbPartPredMode(macroblock* ma, MbTypeName name, uint8_t a)
         else if(name == SI_M) return (MbPartPredMode)macroBlockInfo_SI_slice[name -30][2 + a];
         else if(name >= B_Direct_16x16 && name <= B_Skip) return (MbPartPredMode)macroBlockInfo_B_slice[name - 50][2 + a];
         else if(name >= P_L0_16x16 && name <= P_Skip) return (MbPartPredMode)macroBlockInfo_P_SP_slice[name - 40][2 + a];
+        else return Pred_NU;
     }
     else if(ma->num_MBpart == 4)
     {

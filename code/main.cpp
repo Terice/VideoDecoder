@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string>
+
 #include <iostream>
 using namespace std;
 
@@ -10,16 +11,17 @@ using namespace std;
 #include "Debug.h"
 #include "NAL.h"
 
-#define FILEPATH "../../../../resource/fox.264"
+#define FILEPATH "../resource/fox.264"
+#define FILEPATH_DEBUG_CONF "./debug_config"
 
 int main()
 {
     FILE* fp;
     
-    if((fp = fopen(FILEPATH, "r")) == NULL) exit(-1);
+    if((fp = fopen(FILEPATH, "r")) == NULL) {printf("input file err\n");exit(-1);};
 
     //这三个对象分别是Debug器，解析器，解码器
-    Debug debug("./debug_config");//Debug从配置的lua文件中读入控制变量
+    Debug debug(FILEPATH_DEBUG_CONF);//Debug从配置的lua文件中读入控制变量
     Parser parser(fp, &debug);//parser从fp中读入字节数据，并且带上debug对象
     Decoder decoder;//Decoder用来做图像管理等，在nal运行的时候用到
 
@@ -30,8 +32,6 @@ int main()
     {
         NAL nal(&parser, &decoder);
         nal.decode();
-
-        cout << ">>main : nal" << i << endl;
         i++;
     }
 

@@ -152,6 +152,9 @@ void macroblock::Parse(int mode)
     else if(type >= B_Direct_16x16 && type <= B_Skip) mb_type -= 50;
     else std::cout << "error type" << std::endl;
 
+
+
+
     num_MBpart = Get_NumMbPart(type);
     premode = Get_MbPartPredMode(this, type, 0);
     //PCM宏块直接读取所有的数据
@@ -171,6 +174,8 @@ void macroblock::Parse(int mode)
     {
         uint8_t noSubMbPartSizeLessThan8x8Flag = 1;
         //宏块四分，成为4个子宏块
+        //对于P来说是P_8x8 P_8x8_ref
+
         if(type != I_NxN && premode != Intra_16x16 && num_MBpart == 4)
         {
             //----------------------------------------------------子宏块预测
@@ -218,15 +223,16 @@ void macroblock::Parse(int mode)
                 else ref_idx_l1[mbPartIdx] = 0;
             for(mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++)
             {
+                subMbPartIdexInchart_curIdx = Get_SubNumMbPart(sub_mb_type[mbPartIdx]);
                 if(sub_mb_type[mbPartIdx] != B_Direct_8x8 && Get_SubMbPartPredMode(sub_mb_type[mbPartIdx]) != Pred_L1) 
-                    for(subMbPartIdx = 0; subMbPartIdx < (subMbPartCount = subMbInfo[subMbPartIdexInchart_curIdx][1]); subMbPartIdx++)
+                    for(subMbPartIdx = 0; subMbPartIdx < subMbPartIdexInchart_curIdx/*(subMbPartCount = subMbInfo[subMbPartIdexInchart_curIdx][1])*/; subMbPartIdx++)
                     {
                         for(compIdx = 0; compIdx < 2; compIdx++)
                         {
                             mvd_l0[mbPartIdx][subMbPartIdx][compIdx] =  parser_g->read_ae(0x43000 + ((uint16_t)mbPartIdx << 8) + (subMbPartIdx << 4)  + (compIdx << 1) + 0);
                         }
                         pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, ref_idx_l0[mbPartIdx], 0, mv_l0);
-                                                if(parser_g->debug->inter_movevector())
+                        if(parser_g->debug->inter_movevector())
                         {
                             printf(">>mvd_l0: (%d, %d) in 4x4sub\n", mvd_l0[mbPartIdx][subMbPartIdx][0], mvd_l0[mbPartIdx][subMbPartIdx][1]);
                             printf(">>mv_l0 : (%d, %d) in 4x4sub\n", mv_l0[mbPartIdx][subMbPartIdx][0], mv_l0[mbPartIdx][subMbPartIdx][1]);
@@ -237,8 +243,9 @@ void macroblock::Parse(int mode)
             }
             for(mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++)
             {
+                subMbPartIdexInchart_curIdx = Get_SubNumMbPart(sub_mb_type[mbPartIdx]);
                 if(sub_mb_type[mbPartIdx] != B_Direct_8x8 && Get_SubMbPartPredMode(sub_mb_type[mbPartIdx]) != Pred_L0)
-                    for(subMbPartIdx = 0; subMbPartIdx < (subMbPartCount = subMbInfo[subMbPartIdexInchart_curIdx][1]); subMbPartIdx++)
+                    for(subMbPartIdx = 0; subMbPartIdx < subMbPartIdexInchart_curIdx/*(subMbPartCount = subMbInfo[subMbPartIdexInchart_curIdx][1])*/; subMbPartIdx++)
                     {
                         
                         for(compIdx = 0; compIdx < 2; compIdx++) 
@@ -551,23 +558,24 @@ void macroblock::Decode(int index)
         //如果不是16x16直接预测
         if(up_slice->get_type() != B && type != B_Direct_16x16 && type != B_Skip)
         {
-            
             //获取宏块的子块数量
             uint8_t mbPart = Get_NumMbPart(type);
             uint8_t width = Get_MbPartWidth(type);
             uint8_t height = Get_MbPartHeight(type);
 
+            //子块的循环，
             for (uint8_t mbPartIdx = 0; mbPartIdx < mbPart; mbPartIdx++)
             {
                 int refidx_l0 = ref_idx_l0?ref_idx_l0[mbPartIdx]:0;
                 int refidx_l1 = ref_idx_l1?ref_idx_l1[mbPartIdx]:0;
                 bool predFlag_0 = Get_PredFlag(this, mbPartIdx, 0);
                 bool predFlag_1 = Get_PredFlag(this, mbPartIdx, 1);
-                //如果有子子块，那么循环的最大值增加
+
+                //如果有子子块，那么循环的最大值增加为子子块的数量，否则为1（当前子块）
                 uint8_t subMbPart = num_MBpart == 4 ? Get_SubNumMbPart(sub_mb_type[mbPartIdx]) : 1;
                 for (uint8_t subPartIdx = 0; subPartIdx < subMbPart; subPartIdx++)
                 {
-                    //如果是4分块，那么把宽高都更新为子子块的宽和高
+                    //如果是4分块，那么把宽高都 更新 为子子块的宽和高
                     if(num_MBpart == 4)
                     {
                         width  = Get_SubMbPartWidth(sub_mb_type[mbPartIdx]);
@@ -577,9 +585,18 @@ void macroblock::Decode(int index)
                     //如果有前向预测，
                     if(predFlag_0)
                     {
-                        
-                        picture* ref_pic_0 = up_slice->decoder->get_Ref0PicByI(0);
-                        if(parser_g->debug->pic_terminalchar())
+                        if(!up_slice->decoder->list_Ref0[ref_idx_l0[mbPartIdx]]) 
+                        {
+                            printf("slice :%d, macro:%d, %d, refidx:%d\n", up_slice->get_index(), position_x, position_y, ref_idx_l0[mbPartIdx]);
+                            up_slice->decoder->print_list();
+                            exit(0);
+                        }
+                        picture* ref_pic_0 = up_slice->decoder->list_Ref0[ref_idx_l0[mbPartIdx]];
+                        if(ref_idx_l0[mbPartIdx] != 0)
+                            {
+                                int a = 0;
+                            }
+                        // if(parser_g->debug->pic_terminalchar())
                         // cout << (*ref_pic_0) << endl;
                         Prediction_Inter(tmp_0 ,mbPartIdx, subPartIdx, width, height, ref_pic_0, mv_l0,1);
                         
@@ -636,7 +653,6 @@ void macroblock::Decode(int index)
                                 Weight_defaultWeight(tmp_0, tmp_1, out, predFlag_0, predFlag_1);
                             }
                         }
-
                     }
                     //赋值
                     int mb_partWidth = Get_MbPartWidth(type);

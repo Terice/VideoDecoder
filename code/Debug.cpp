@@ -14,6 +14,7 @@ inline bool getControlValue(lua_State* L, int idex)
     if(!lua_isnumber(L, idex)) return result;
     else {
         result = (bool)(int)lua_tonumber(L, idex);
+        return result;
     }
 }
 //已经废弃

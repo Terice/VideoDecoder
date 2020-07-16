@@ -96,6 +96,7 @@ enum SubMbTypeName
     P_L0_8x4          = 1,//
     P_L0_4x8          = 2,//
     P_L0_4x4          = 3,//
+    inferred_mb_type  = 4, //
 
     //B宏块中的子宏块类型
     B_Direct_8x8     = 10,//
@@ -112,12 +113,17 @@ enum SubMbTypeName
     B_L1_4x4         = 21,//
     B_Bi_4x4         = 22,//
 
-    inferred_mb_type  = 80, //
 
     sub_type_NULL    = 255
 };
 
-
+enum RefState
+{
+    Ref_short,
+    Ref_long,
+    Nun_ref,
+    Nul_exist,
+};
 
 
 #endif
