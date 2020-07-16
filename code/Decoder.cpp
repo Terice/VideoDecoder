@@ -37,11 +37,12 @@ void Decoder::print_list()
 }
 bool Decoder::clear_DecodedPic()
 {
-    //清空所有的队列
+    //删除存储区的所有数据
     for(uint8_t i = 0; i < list_Decoded.size(); i++)
     {
         Sdelete_s(list_Decoded[i]);
     }
+    //清空所有的队列
     list_Decoded.clear(); 
     list_Ref.clear(); 
     list_Ref1.clear();
@@ -67,12 +68,6 @@ bool Decoder::ctrl_Memory()
     return true;
 }
 
-inline void swap(picture*&a, picture*& b)
-{
-    picture* tmp = a;
-    a = b;
-    b = tmp;
-}
 bool Decoder::add_ReferenPic(picture* pic_toadd)
 {
     if(pic_toadd == NULL) return false;
@@ -109,24 +104,26 @@ bool Decoder::flsh_ListRef()
 }
 bool Decoder::init_RefPicList()
 {
+    //去掉不用于参考的帧，
     flsh_ListRef();
     //建表包含 初始化，排序两个工作,
     Slicetype type = cur_slice->get_type();
     if(type == P || type == SP)
     {
-        std::vector<picture*>::iterator it_ref0, it;
+        std::vector<picture*>::iterator it;
+        int i_ref0 = 0;
 
         //清空参考队列
         list_Ref0.clear();
-        //插入long
+        //插入short，先插入short，然后 long ，这样保证 short 自然在 long 的前面
         for(it = list_Ref_short.begin(); it != list_Ref_short.end(); it++)
         {
             list_Ref0.push_back(*it);
         }
-        it_ref0 = list_Ref0.end()-1;
+        i_ref0 = list_Ref0.size();
         //从开头排序到结束的地方
         std::sort(list_Ref0.begin(), list_Ref0.end(), \
-        [](picture* l, picture* r)->bool{return l->FrameNumWrap > r->FrameNumWrap;}\
+        [](picture* l, picture* r)->bool{return l->PicNum > r->PicNum;}\
         );
         //插入long
         for(it = list_Ref_long.begin(); it != list_Ref_long.end(); it++)
@@ -134,15 +131,100 @@ bool Decoder::init_RefPicList()
             list_Ref0.push_back(*it);
         }
         //从短期结束的地方开始排序到结束的地方
-        std::sort(it_ref0+1, list_Ref0.end(), \
-        [](picture* l, picture* r)->bool{return l->LongTermFrameIdx < r->LongTermFrameIdx;}\
+        std::sort(list_Ref0.begin()+i_ref0, list_Ref0.end(), \
+        [](picture* l, picture* r)->bool{return l->LongTermPicNum < r->LongTermPicNum;}\
         );
 
         return true;
     }
     else //if(type == B)
     {
+        //P 帧中是直接插入参考帧，B帧需要一些处理
+        std::vector<picture*>::iterator it;
+        int i_ref = 0;//一个中间变量，用来存储需要排序的节点位置
+
+        //清空参考队列0
+        list_Ref0.clear();
+        //插入short,插入的时候做第一步排序，也就是所有的大于当前POC的在末尾追加，小于的在整个小于队列的末尾追加
+        for(it = list_Ref_short.begin(), i_ref = 0; it != list_Ref_short.end(); it++)
+        {
+            if((*it)->POC > pic_current->POC)
+            {
+                list_Ref0.push_back(*it);//大于当前POC的在末尾追加
+            }
+            else
+            {   //i_ref 用来指明小于当前POC的pic的结束位置，插入一个就增加一次
+                list_Ref0.insert(list_Ref0.begin()+i_ref, *it);//小于的在整个小于队列的末尾追加
+                i_ref++;
+            }
+        }
+        //小于当前POC的按照降序排列
+        std::sort(list_Ref0.begin(), list_Ref0.begin()+i_ref, \
+        [](picture* l, picture* r)->bool{return l->POC > r->POC;}\
+        );
+        //大于当前POC的按照升排列
+        std::sort(list_Ref0.begin()+i_ref, list_Ref0.end(),\
+        [](picture* l, picture* r)->bool{return l->POC < r->POC;}\
+        );
+        i_ref = list_Ref0.size();
+        //插入long
+        for(it = list_Ref_long.begin(); it != list_Ref_long.end(); it++)
+        {
+            list_Ref0.push_back(*it);
+        }
+        //从短期结束的地方开始排序到结束的地方
+        std::sort(list_Ref0.begin()+i_ref, list_Ref0.end(), \
+        [](picture* l, picture* r)->bool{return l->LongTermPicNum < r->LongTermPicNum;}\
+        );
         
+        //清空参考队列1
+        list_Ref1.clear();
+        //list1和list0方法相同，只不过排序的序列不同
+        for(it = list_Ref_short.begin(), i_ref = 0; it != list_Ref_short.end(); it++)
+        {
+            if((*it)->POC < pic_current->POC)
+            {
+                list_Ref1.push_back(*it);//小于当前POC的在末尾追加
+            }
+            else
+            {   //i_ref 用来指明大于当前POC的pic的结束位置，插入一个就增加一次
+                list_Ref1.insert(list_Ref1.begin()+i_ref, *it);//大于的在整个大于队列的末尾追加
+                i_ref++;
+            }
+        }
+        //大于当前POC的按照升序排列
+        std::sort(list_Ref1.begin(), list_Ref1.begin()+i_ref, \
+        [](picture* l, picture* r)->bool{return l->POC < r->POC;}\
+        );
+        //小于当前POC的按照降序排列
+        std::sort(list_Ref1.begin()+i_ref, list_Ref1.end(),\
+        [](picture* l, picture* r)->bool{return l->POC > r->POC;}\
+        );
+        i_ref = list_Ref1.size();
+        //插入long
+        for(it = list_Ref_long.begin(); it != list_Ref_long.end(); it++)
+        {
+            list_Ref1.push_back(*it);
+        }
+        //从短期结束的地方开始排序到结束的地方
+        std::sort(list_Ref1.begin()+i_ref, list_Ref1.end(), \
+        [](picture* l, picture* r)->bool{return l->LongTermPicNum < r->LongTermPicNum;}\
+        );
+        if(list_Ref1.size() > 1 && list_Ref0.size() == list_Ref1.size())
+        {
+            int size = list_Ref0.size();
+            bool re = true;
+            for (size_t i = 0; i < size; i++)
+            {
+                if(list_Ref0[i] != list_Ref1[i])
+                {
+                    re = false;
+                    break;
+                }
+            }
+            if(re)
+            swap(list_Ref1[0], list_Ref1[1]);
+        }
         return false;
     }
 }
@@ -152,7 +234,7 @@ int PicNumF(picture* pic)
     else                             {return -1;}
 }
 //重排序
-bool Decoder::opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_idx_lX_active_minus1, bool X)
+bool Decoder::opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_idx_lX_active_minus1, char X)
 {
 
     int i = 0, opra = 0;
@@ -166,11 +248,11 @@ bool Decoder::opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_id
     {
         //在末尾加上一位监视位
         RefPicListX.push_back(NULL);
-        //短期重排
         while ((opra = opra_ModS[i++]) != 3)
         {
             if(opra == 0 || opra == 1)
             {
+                //短期重排
                 int sig = opra == 0?-1:1;
                 int diff_pic_num = (opra_ModS[i++] + 1)*sig;
                 if(picNumLXPred + diff_pic_num < 0 || picNumLXPred + diff_pic_num > MaxPicNum) picNumLXNoWrap = picNumLXPred + diff_pic_num + -1*sig*MaxPicNum;
@@ -208,14 +290,14 @@ bool Decoder::opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_id
             {//长期重排
             }
         }
-        //去掉多余的元素
+        //去掉多余的元素，一是超出长度的，一是NULL元素
         while(RefPicListX.size() > num_ref_idx_lX_active_minus1 + 1 || *(RefPicListX.end()) == NULL)
         {
             RefPicListX.pop_back();
         }
+        //删掉用过的操作符
+        opra_ModS.erase(opra_ModS.begin(), opra_ModS.begin()+i);
     }
-    //删除操作符
-    opra_ModS.clear();
     return true;
 }
 

@@ -17,8 +17,7 @@
 #include <cmath>
 void macroblock::Calc(int mode)
 {
-    //如果是帧内预测
-    if(is_intrapred())
+    if(is_intrapred())    //如果是帧内预测
     {
         if(premode == Intra_16x16)
         {
@@ -33,11 +32,11 @@ void macroblock::Calc(int mode)
             this->ConstructPicture();
         }
     }
-    else if(type == I_PCM)
+    else if(type == I_PCM)//PCM 宏块需要特定的处理
     {
         
     }
-    else //if(is_interpred())
+    else //if(is_interpred())   //
     {
         //帧间也是4x4解码残差 
         this->Decode(0);
@@ -85,24 +84,26 @@ void macroblock::Init0(int mode)
     else type = B_Skip;
     num_MBpart = Get_NumMbPart(type);
 
-    if(type == P_Skip)
+    if(type == P_Skip)//P_Skip宏块，
     {
+        predFlagL0 = new bool[1]{true};
+        predFlagL1 = NULL;
         mvd_l0       = new matrix[num_MBpart];
         for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l0[i] << init;}
-        mvd_l1       = new matrix[num_MBpart];
-        for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l1[i] << init;}
         mv_l0       = new matrix[num_MBpart];
         for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mv_l0[i] << init;}
-        mv_l1       = new matrix[num_MBpart];
-        for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mv_l1[i] << init;}
-        ref_idx_l0 = new int[1]();//初始化为0
+        mvd_l1       = NULL;
+        mv_l1        = NULL;
+        ref_idx_l0 = new int[1]();//前向参考为0，没有后向参考
         ref_idx_l1 = NULL;
-        pic->get_MvNeighbour(this, 0, 0, 0, 0, mv_l0);
-        mv_l0[0][0][0] += mvd_l0[0][0][0];
+        pic->get_MvNeighbour(this, 0, 0, 0, mv_l0);//运动适量的残差为0，预测值由周围的宏块给出
+        mv_l0[0][0][0] += mvd_l0[0][0][0];//预测值就是实际的运动矢量（运动矢量残差为0）
         mv_l0[0][0][1] += mvd_l0[0][0][1];
     }
-    else
+    else//if(type == B_Skip)
     {
+        predFlagL0 = new bool[4];
+        predFlagL1 = new bool[4];
         mvd_l0       = new matrix[num_MBpart];
         for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l0[i] << init;}
         mvd_l1       = new matrix[num_MBpart];
@@ -114,11 +115,12 @@ void macroblock::Init0(int mode)
         for (uint8_t i = 0; i < num_MBpart; i++){matrix init(4,2,0); mv_l1[i] << init;}
         ref_idx_l0 = new int[4]();
         ref_idx_l1 = new int[4]();
+        //B_Skip需要进行并置块的选择和计算
 
         for(int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++)
             for(int subMbPartIdx = 0; subMbPartIdx < 4; subMbPartIdx++)
             {
-                pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, ref_idx_l0[mbPartIdx], 0, mv_l0);
+                pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 0, mv_l0);
                 mv_l0[mbPartIdx][subMbPartIdx][0] += mvd_l0[mbPartIdx][0][0];
                 mv_l0[mbPartIdx][subMbPartIdx][1] += mvd_l0[mbPartIdx][0][1];
                 if(parser_g->debug->inter_movevector())printf(">>MoveV: (%d, %d) in B_Skip list 0\n", mv_l0[mbPartIdx][subMbPartIdx][0], mv_l0[mbPartIdx][subMbPartIdx][1]);
@@ -126,15 +128,14 @@ void macroblock::Init0(int mode)
         for(int mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++)
             for(int subMbPartIdx = 0; subMbPartIdx < 4; subMbPartIdx++)
             {
-                pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, ref_idx_l1[mbPartIdx], 1, mv_l1);
+                pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 1, mv_l1);
                 mv_l1[mbPartIdx][subMbPartIdx][0] += mvd_l1[mbPartIdx][0][0];
                 mv_l1[mbPartIdx][subMbPartIdx][1] += mvd_l1[mbPartIdx][0][1];
                 if(parser_g->debug->inter_movevector())printf(">>MoveV: (%d, %d) in B_Skip list 1\n", mv_l1[mbPartIdx][subMbPartIdx][0], mv_l1[mbPartIdx][subMbPartIdx][1]);
             }
     }
-    mb_skip_flag = 1;
-    //skip也需要保持残差的结构
-    Calc_residual();
+    mb_skip_flag = 1;//设置当前宏块的跳过编码标志为0，
+    Calc_residual();//skip也需要保持残差的结构(全部置零)
 }
 void macroblock::Parse(int mode)
 {
@@ -152,10 +153,8 @@ void macroblock::Parse(int mode)
     else if(type >= B_Direct_16x16 && type <= B_Skip) mb_type -= 50;
     else std::cout << "error type" << std::endl;
 
-
-
-
     num_MBpart = Get_NumMbPart(type);
+    
     premode = Get_MbPartPredMode(this, type, 0);
     //PCM宏块直接读取所有的数据
     if(type == I_PCM)
@@ -167,47 +166,52 @@ void macroblock::Parse(int mode)
             pcm_sample_luma[i] = parser_g->read_un(parser_g->pV->BitDepthY);
         for(unsigned i = 0; i < 2 * (8 * 8); i++) 
             pcm_sample_chroma[i]= parser_g->read_un(parser_g->pV->BitDepthC);
-
-        int a =0;
     }
     else
     {
+        //B_Direct_16x16 B_Direct_8x8在这里就进行了宏块运动矢量的预测和参考索引的预测
+        //B_Skip 和 P_Skip 宏块是不会进入这个函数的
         uint8_t noSubMbPartSizeLessThan8x8Flag = 1;
         //宏块四分，成为4个子宏块
         //对于P来说是P_8x8 P_8x8_ref
-
+        //对于B来说是B_8x8
         if(type != I_NxN && premode != Intra_16x16 && num_MBpart == 4)
         {
             //----------------------------------------------------子宏块预测
 
             uint8_t mbPartIdx, subMbPartIdx, compIdx, subMbPartIdexInchart_curIdx;
-            uint8_t subMbPartCount;
+            uint8_t i;
 
             sub_mb_type  = new SubMbTypeName[4]{sub_type_NULL,sub_type_NULL,sub_type_NULL,sub_type_NULL};
+
             ref_idx_l0   = new int[4];
-            ref_idx_l1   = new int[4];
-
-
+            predFlagL0 = new bool[num_MBpart];
             mvd_l0       = new matrix[num_MBpart];
-            for (uint8_t i = 0; i < num_MBpart; i++){matrix init(4,2,0); mvd_l0[i] << init;}
-            mvd_l1       = new matrix[num_MBpart];
-            for (uint8_t i = 0; i < num_MBpart; i++){matrix init(4,2,0); mvd_l1[i] << init;}
-                
-            //步进debug这里要跳过，（会卡住
+            for (i = 0; i < num_MBpart; i++){matrix init(4,2,0); mvd_l0[i] << init;}
             mv_l0       = new matrix[num_MBpart];
-            for (uint8_t i = 0; i < num_MBpart; i++){matrix init(4,4,0); mv_l0[i] << init;}
-            mv_l1       = new matrix[num_MBpart];
-            for (uint8_t i = 0; i < num_MBpart; i++){matrix init(4,4,0); mv_l1[i] << init;}
+            for (i = 0; i < num_MBpart; i++){matrix init(4,2,0); mv_l0[i] << init;}
 
+            ref_idx_l1   = new int[4];
+            predFlagL1 = new bool[num_MBpart];
+            mvd_l1       = new matrix[num_MBpart];
+            for (i = 0; i < num_MBpart; i++){matrix init(4,2,0); mvd_l1[i] << init;}
+            mv_l1       = new matrix[num_MBpart];
+            for (i = 0; i < num_MBpart; i++){matrix init(4,2,0); mv_l1[i] << init;}
+            
+            uint8_t sub_type = 0;
             for(mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++)
             {
-                uint8_t sub_type = 0;
                 sub_type = parser_g->read_ae(51);
-                //+= 10是在枚举类型中加上B块的偏移
-                if(type >= 50 && type <= 74) sub_type += 10;
+                if(type >= 50 && type <= 74) sub_type += 10;//+= 10是在枚举类型中加上B块的偏移
                 sub_mb_type[mbPartIdx] = (SubMbTypeName)sub_type;
             }
 
+            for(mbPartIdx = 0; mbPartIdx < num_MBpart; mbPartIdx++)
+            {
+                predFlagL0[mbPartIdx] = Get_PredFlag(this, mbPartIdx, 0);
+                if(up_slice->get_type() == B)
+                predFlagL1[mbPartIdx] = Get_PredFlag(this, mbPartIdx, 1);
+            }
             for(mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++)
                 if((up_slice->ps->num_ref_idx_l0_active_minus1 > 0 || up_slice->ps->mb_field_decoding_flag != up_slice->ps->field_pic_flag) &&\
                 sub_mb_type[mbPartIdx] != B_Direct_8x8 && \
@@ -231,7 +235,7 @@ void macroblock::Parse(int mode)
                         {
                             mvd_l0[mbPartIdx][subMbPartIdx][compIdx] =  parser_g->read_ae(0x43000 + ((uint16_t)mbPartIdx << 8) + (subMbPartIdx << 4)  + (compIdx << 1) + 0);
                         }
-                        pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, ref_idx_l0[mbPartIdx], 0, mv_l0);
+                        pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 0, mv_l0);
                         if(parser_g->debug->inter_movevector())
                         {
                             printf(">>mvd_l0: (%d, %d) in 4x4sub\n", mvd_l0[mbPartIdx][subMbPartIdx][0], mvd_l0[mbPartIdx][subMbPartIdx][1]);
@@ -240,7 +244,16 @@ void macroblock::Parse(int mode)
                         mv_l0[mbPartIdx][subMbPartIdx][0] += mvd_l0[mbPartIdx][subMbPartIdx][0];
                         mv_l0[mbPartIdx][subMbPartIdx][1] += mvd_l0[mbPartIdx][subMbPartIdx][1];
                     }
+                else
+                {
+                    //B_Direct_8x8
+                    Prediction_Inter_Direct(mbPartIdx, 0);
+                    ref_idx_l0[mbPartIdx] = 0;
+                    ref_idx_l1[mbPartIdx] = 0;
+                }
+                
             }
+            if(up_slice->get_type() == B)
             for(mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++)
             {
                 subMbPartIdexInchart_curIdx = Get_SubNumMbPart(sub_mb_type[mbPartIdx]);
@@ -259,11 +272,13 @@ void macroblock::Parse(int mode)
                         }
                         mv_l1[mbPartIdx][subMbPartIdx][0] += mvd_l1[mbPartIdx][subMbPartIdx][0];
                         mv_l1[mbPartIdx][subMbPartIdx][1] += mvd_l1[mbPartIdx][subMbPartIdx][1];
-                        pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, ref_idx_l1[mbPartIdx], 1, mv_l1);
+                        pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 1, mv_l1);
                     }
                 else //B_direct_8x8预测 
                 {
-
+                    Prediction_Inter_Direct(mbPartIdx, 0);
+                    ref_idx_l0[mbPartIdx] = 0;
+                    ref_idx_l1[mbPartIdx] = 0;
                 }
             }
             //--------------------------------------------------------子宏块预测结束
@@ -323,20 +338,30 @@ void macroblock::Parse(int mode)
             //帧间预测
             else if(premode != Direct)
             {
-                ref_idx_l0   = new int[4];
-                ref_idx_l1   = new int[4];
-
+                uint8_t i;
+                ref_idx_l0   = new int[num_MBpart];
+                predFlagL0 = new bool[num_MBpart];
                 mvd_l0       = new matrix[num_MBpart];
-                for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l0[i] << init;}
-                mvd_l1       = new matrix[num_MBpart];
-                for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l1[i] << init;}
-
+                for (i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l0[i] << init;}
                 mv_l0       = new matrix[num_MBpart];
-                for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mv_l0[i] << init;}
+                for (i = 0; i < num_MBpart; i++){matrix init(1,2,0); mv_l0[i] << init;}
+                
+                ref_idx_l1   = new int[num_MBpart];
+                predFlagL1 = new bool[num_MBpart];
+                mvd_l1       = new matrix[num_MBpart];
+                for (i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l1[i] << init;}
                 mv_l1       = new matrix[num_MBpart];
-                for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mv_l1[i] << init;}
+                for (i = 0; i < num_MBpart; i++){matrix init(1,2,0); mv_l1[i] << init;}
+                    
 
                 uint8_t mbPartIdx;
+                //读取预测标志位
+                for(mbPartIdx = 0; mbPartIdx < num_MBpart; mbPartIdx++)
+                {
+                    predFlagL0[mbPartIdx] = Get_PredFlag(this, mbPartIdx, 0);
+                    if(up_slice->get_type() == B)
+                    predFlagL1[mbPartIdx] = Get_PredFlag(this, mbPartIdx, 1);
+                }
                 for(mbPartIdx = 0; mbPartIdx < num_MBpart; mbPartIdx++) 
                     if((up_slice->ps->num_ref_idx_l0_active_minus1 > 0 || \
                     up_slice->ps->mb_field_decoding_flag != up_slice->ps->field_pic_flag) && \
@@ -358,7 +383,7 @@ void macroblock::Parse(int mode)
                         {
                             mvd_l0[mbPartIdx][0][compIdx]          = parser_g->read_ae(0x43000 + ((uint16_t)mbPartIdx << 8) + (0 << 4)  + (compIdx << 1) + 0); 
                         }
-                        pic->get_MvNeighbour(this, mbPartIdx, 0, ref_idx_l0[mbPartIdx], 0,mv_l0);
+                        pic->get_MvNeighbour(this, mbPartIdx, 0, 0,mv_l0);
                         if(parser_g->debug->inter_movevector())
                         {
                             printf(">>mvd_l0: (%d, %d)\n", mvd_l0[mbPartIdx][0][0], mvd_l0[mbPartIdx][0][1]);
@@ -368,6 +393,7 @@ void macroblock::Parse(int mode)
                         mv_l0[mbPartIdx][0][1] += mvd_l0[mbPartIdx][0][1];
                     }
                 }
+                if(up_slice->get_type() == B)
                 for(mbPartIdx = 0; mbPartIdx < num_MBpart; mbPartIdx++)
                 {
                     premode = Get_MbPartPredMode(this, type, mbPartIdx);
@@ -377,7 +403,7 @@ void macroblock::Parse(int mode)
                         {
                             mvd_l1[mbPartIdx][0][compIdx]          = parser_g->read_ae(0x43000 + ((uint16_t)mbPartIdx << 8) + (0 << 4)  + (compIdx << 1) + 1);
                         }
-                        pic->get_MvNeighbour(this, mbPartIdx, 0, ref_idx_l1[mbPartIdx], 1, mv_l1);
+                        pic->get_MvNeighbour(this, mbPartIdx, 0, 1, mv_l1);
                         if(parser_g->debug->inter_movevector())
                         {
                             printf(">>mvd_l1: (%d, %d)\n", mvd_l1[mbPartIdx][0][0], mvd_l1[mbPartIdx][0][1]);
@@ -392,22 +418,10 @@ void macroblock::Parse(int mode)
         }
         else //Direct预测 指的是 B_Direct_16x16
         {
-            ref_idx_l0   = new int[1]();
-            ref_idx_l1   = new int[1]();
-
-            mvd_l0       = new matrix[4];
-            for (uint8_t i = 0; i < 4; i++){matrix init(1,2,0); mvd_l0[i] << init;}
-            mvd_l1       = new matrix[4];
-            for (uint8_t i = 0; i < 4; i++){matrix init(1,2,0); mvd_l1[i] << init;}
-                
-            //步进debug这里要跳过，（会卡住
-            mv_l0       = new matrix[4];
-            for (uint8_t i = 0; i < 4; i++){matrix init(4,4,0); mv_l0[i] << init;}
-            mv_l1       = new matrix[4];
-            for (uint8_t i = 0; i < 4; i++){matrix init(4,4,0); mv_l1[i] << init;}
+            //B_Direct_16x16 没有运动矢量、参考索引但是有残差，所以需要出现在这里
+            ref_idx_l0 = new int[4];
+            ref_idx_l1 = new int[4];
             
-            //
-
         }
         //色彩编码模式
         //非帧内16x16的色彩系数编码模式由读取得到，
@@ -435,7 +449,6 @@ void macroblock::Parse(int mode)
         de->set_TimeFlag();
         Calc_residual();
         de->de_DltTime("re end");
-        // exit(0);
     }
 }
 void macroblock::Calc_residual()
@@ -555,8 +568,9 @@ void macroblock::Decode(int index)
     }
     else //if(this->is_interpred())
     {
-        //如果不是16x16直接预测
-        if(up_slice->get_type() != B && type != B_Direct_16x16 && type != B_Skip)
+        //如果不是16x16直接预测 并且 不是B_Skip宏块
+        Slicetype slice_type = up_slice->get_type();
+        if(slice_type!= B && type != B_Direct_16x16 && type != B_Skip)
         {
             //获取宏块的子块数量
             uint8_t mbPart = Get_NumMbPart(type);
@@ -568,8 +582,9 @@ void macroblock::Decode(int index)
             {
                 int refidx_l0 = ref_idx_l0?ref_idx_l0[mbPartIdx]:0;
                 int refidx_l1 = ref_idx_l1?ref_idx_l1[mbPartIdx]:0;
-                bool predFlag_0 = Get_PredFlag(this, mbPartIdx, 0);
-                bool predFlag_1 = Get_PredFlag(this, mbPartIdx, 1);
+
+                bool predFlag_0 = predFlagL0[mbPartIdx];
+                bool predFlag_1 = slice_type == B ? predFlagL1[mbPartIdx]:false;
 
                 //如果有子子块，那么循环的最大值增加为子子块的数量，否则为1（当前子块）
                 uint8_t subMbPart = num_MBpart == 4 ? Get_SubNumMbPart(sub_mb_type[mbPartIdx]) : 1;
@@ -591,23 +606,19 @@ void macroblock::Decode(int index)
                             up_slice->decoder->print_list();
                             exit(0);
                         }
+                        //选择参考帧，
                         picture* ref_pic_0 = up_slice->decoder->list_Ref0[ref_idx_l0[mbPartIdx]];
-                        if(ref_idx_l0[mbPartIdx] != 0)
-                            {
-                                int a = 0;
-                            }
-                        // if(parser_g->debug->pic_terminalchar())
-                        // cout << (*ref_pic_0) << endl;
+                        //帧内预测
                         Prediction_Inter(tmp_0 ,mbPartIdx, subPartIdx, width, height, ref_pic_0, mv_l0,1);
                         
                     }
                     //如果有后向预测
                     if(predFlag_1)
                     {
-                        picture* ref_pic_0 = up_slice->decoder->get_Ref1PicByI(0);
-                        Prediction_Inter(tmp_1 ,mbPartIdx, subPartIdx, width, height, ref_pic_0, mv_l1,1);
+                        picture* ref_pic_1 = up_slice->decoder->list_Ref1[ref_idx_l1[mbPartIdx]];
+                        Prediction_Inter(tmp_1 ,mbPartIdx, subPartIdx, width, height, ref_pic_1, mv_l1,1);
                     }
-                    //加权
+                    //加权预测
                     uint8_t weighted_pred_flag = up_slice->ps->pps->weighted_pred_flag;
                     uint8_t weighted_bipred_idc = up_slice->ps->pps->weighted_bipred_idc;
 
@@ -804,6 +815,46 @@ int macroblock::Prediction_Inter_LumaSampleInterpolation(int xIntL, int yIntL, i
     // printf(">>Inter: result: %d\n", *(predPart[xFracL][yFracL]));
     return *(predPart[xFracL][yFracL]);
 }
+int macroblock::Prediction_Inter_Direct(int mbPartIdx, int subMbPartIdx)
+{
+    int mvCol[2] = {0,0};
+    int refIdxCol = 0;
+    Decoder* de = up_slice->decoder;
+    picture* colPic = NULL;
+    colPic = de->list_Ref1[0];//选择参考表1的第一帧作为并置pic
+    macroblock* mbAddrCol = colPic->get_MBXY(position_x, position_y);
+    int luma4x4BlkIdx = 0;
+    if(parser_g->pS->sps->direct_8x8_inference_flag) luma4x4BlkIdx = 5*mbPartIdx;
+    else luma4x4BlkIdx = 4*mbPartIdx + subMbPartIdx;
+    
+    if(mbAddrCol->is_intrapred()) {mvCol[0] = 0; mvCol[1] = 0; refIdxCol = -1;}
+    else 
+    {   
+    }
+
+    //时空预测
+    if(up_slice->ps->direct_spatial_mv_pred_flag)//空间预测
+    {
+        //这里有两种情况
+        //1、宏块随着周围的宏块一起运动
+        pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 0, mv_l0);
+        pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 1, mv_l1);
+        //2、宏块静止不动
+    }
+    else//时间预测
+    {
+        
+    }
+    //对于 B_Direct_8x8 这里解码完毕
+    //对于 B_Direct_16x16 B_Skip 这个函数需要分别执行4次
+    //到这里运动矢量、参考索引、预测标志位 就已经解码完毕
+
+    
+
+    return 1;
+}
+
+
 void macroblock::Prediction_Intra4x4(int index)
 {
     int luma4x4Index = block4x4Index[index];
@@ -1185,8 +1236,6 @@ void macroblock::Prediction_Intra4x4_H_Up                (matrix& pred, int inde
     {
         for (uint8_t j = 1; j < 5; j++)
         {
-            //pred坐标不需要变换，但是p坐标需要变换，两轴上的值分别加上1
-            //这是矩阵对象只能先访问列带来的问题，
             int zHU = (j - 1) + 2 * (i - 1);
             if(zHU == 0 || zHU == 2 || zHU == 4)
             pred[i-1][j-1] = (p[(i - 1) + ((j - 1) >> 1) + 1][0] + p[(i - 1) + ((j - 1) >> 1) + 1 + 1][0] + 1) >> 1;
@@ -1356,6 +1405,8 @@ macroblock::macroblock(Slice* parent, Parser* parser)
 
     CodedBlockPatternLuma = 0;
     CodedBlockPatternChroma = 0;
+    predFlagL0 = NULL;
+    predFlagL1 = NULL;
 }
 macroblock::~macroblock()
 {
@@ -1379,7 +1430,8 @@ macroblock::~macroblock()
     Sdelete_l(mvd_l0);
     Sdelete_l(mvd_l1);
 
-    
+    Sdelete_l(predFlagL0);
+    Sdelete_l(predFlagL1);
 
     Sdelete_l(rem_intra4x4_pred_mode      );
     Sdelete_l(prev_intra4x4_pred_mode_flag);

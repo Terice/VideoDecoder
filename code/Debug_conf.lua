@@ -56,7 +56,7 @@ DE_PIC_TERMINATECHAR             = 1
 DE_TIMER                         = 0
 --NAL信息的打印
 DE_NAL_INFO                      = 1
-get_conf = function ()
+Get_conf = function ()
     print(">>script:")
     print("         DE_CABAC_STATE          :"..DE_CABAC_STATE          ) 
     print("         DE_CABAC_BIN            :"..DE_CABAC_BIN            ) 

@@ -52,8 +52,9 @@ void Slice::PraseSliceHeader()
     }
     //B片的时间空间直接预测模式
     if(type == B){
-        ps->direct_spatial_mv_pred_flag      = parser->read_un(1);;
+        ps->direct_spatial_mv_pred_flag      = parser->read_un(1);
     }
+    
     //重载的参考帧索引数量
     if(type == P||type == SP||type== B){
         ps->num_ref_idx_active_override_flag = parser->read_un(1);
@@ -94,13 +95,21 @@ void Slice::PraseSliceHeader()
     if(ps->slice_type % 5 == 1){ 
         ps->ref_pic_list_modification_flag_l1= parser->read_un(1);
         if( ps->ref_pic_list_modification_flag_l1 ) 
-        do { 
-           ps->modification_of_pic_nums_idc  = parser->read_ue();
-            if(ps->modification_of_pic_nums_idc == 0 || ps->modification_of_pic_nums_idc == 1 ) 
+        do {
+            std::vector<int>& mods = decoder->opra_ModS;
+            ps->modification_of_pic_nums_idc = parser->read_ue();
+            mods.push_back(ps->modification_of_pic_nums_idc);
+            if(ps->modification_of_pic_nums_idc == 0 || ps->modification_of_pic_nums_idc == 1 )
+            {
                 ps->abs_diff_pic_num_minus1  = parser->read_ue();
-            else if(ps->modification_of_pic_nums_idc == 2) 
+                mods.push_back(ps->abs_diff_pic_num_minus1);
+            }
+            else if(ps->modification_of_pic_nums_idc == 2 ) 
+            {
                 ps->long_term_pic_num        = parser->read_ue();
-        } while(ps->modification_of_pic_nums_idc != 3);
+                mods.push_back(ps->long_term_pic_num);
+            }
+        } while(ps->modification_of_pic_nums_idc != 3 );
     }
     //加权预测
     if((ps->pps->weighted_pred_flag && (type == P || type == SP))||\
@@ -373,13 +382,18 @@ void Slice::PraseSliceDataer()
     }while(moreDataFlag);
     parser->slice_idx += 1;
     parser->cabac_core->slice_end();
+    Calc_POC();
 };
 
 void Slice::Calc_POC()
 {
     uint8_t pic_order_cnt_type = parser->pS->sps->pic_order_cnt_type;
     uint8_t pic_order_cnt_lsb = ps->pic_order_cnt_lsb;
+    
     picture* cur = decoder->get_CurrentPic();
+    cur->pic_order_cnt_lsb = pic_order_cnt_lsb;
+    picture* pre = decoder->get_LastRef();
+
     if(pic_order_cnt_type == 0)
     {
         int prevPicOrderCntMsb = 0,  prevPicOrderCntLsb = 0;
@@ -389,6 +403,20 @@ void Slice::Calc_POC()
         }
         else 
         {
+            if(pre->memory_management_control_operation == 5)
+            {
+                //if(!pre->is_bottom())
+                prevPicOrderCntMsb = 0;
+                prevPicOrderCntLsb = pre->TopFieldOrderCnt;
+                //else
+                // prevPicOrderCntMsb = 0;
+                // prevPicOrderCntLsb = 0;
+            }
+            else
+            {
+                prevPicOrderCntMsb = pre->PicOrderCntMsb;
+                prevPicOrderCntLsb = pre->pic_order_cnt_lsb;
+            }
             
         }
         //calc PicOrderCntMsb
@@ -397,11 +425,15 @@ void Slice::Calc_POC()
         else if((pic_order_cnt_lsb > prevPicOrderCntLsb) && (pic_order_cnt_lsb - prevPicOrderCntLsb > (ps->MaxPicOrderCntLsb / 2)))
         {cur->PicOrderCntMsb = prevPicOrderCntMsb - ps->MaxPicOrderCntLsb;}
         else cur->PicOrderCntMsb = prevPicOrderCntMsb;
-        //calc top cnt, bottom cnt
+        //如果不是底场 TopFieldOrderCnt 由下式给出
         cur->TopFieldOrderCnt = cur->PicOrderCntMsb + pic_order_cnt_lsb;
+        //如果不是顶场  BottomFieldOrderCnt  由下式给出
         if(!ps->field_pic_flag) cur->BottomFieldOrderCnt = cur->TopFieldOrderCnt + ps->delta_pic_order_cnt_bottom;
         else cur->BottomFieldOrderCnt = cur->PicOrderCntMsb + ps->pic_order_cnt_lsb;
     }
+
+
+    cur->POC = Min(cur->TopFieldOrderCnt, cur->BottomFieldOrderCnt);
 }
 //这里只是做了frame的返回，还有其他的情况没有写：自适应 和 场
 macroblock* Slice::get_curMB(){return cur_macroblcok;}

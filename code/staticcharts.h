@@ -1273,27 +1273,30 @@ static const uint8_t macroBlockInfo_B_slice[24][6]=
     { B_8x8         , 4     , Pred_NU, Pred_NU,  8 ,  8  },
     { B_Skip        , 4     , Direct , Pred_NU,  8 ,  8  },
 };
-//第一个索引是子块的类型，第二个索引是该子块的信息
+//第一个索引是子块的类型，第二个索引是所需要的信息的索引
 static const uint8_t subMbInfo[18][6] =
-{//                 |NumSubMbPart
-    { P_L0_8x8         , 1,  Pred_L0,  8,  8, na_mb},               //0  
-    { P_L0_8x4         , 2,  Pred_L0,  8,  4, na_mb},               //1  
-    { P_L0_4x8         , 2,  Pred_L0,  4,  8, na_mb},               //2  
-    { P_L0_4x4         , 4,  Pred_L0,  4,  4, na_mb},               //3  
-    { inferred_mb_type , 4,  Direct ,  4,  4, na_mb},               //
-    { B_Direct_8x8     , 4,  Direct ,  4,  4, na_mb},               //10  
-    { B_L0_8x8         , 1,  Pred_L0,  8,  8, na_mb},               //11  
-    { B_L1_8x8         , 1,  Pred_L1,  8,  8, na_mb},               //12  
-    { B_Bi_8x8         , 1,  BiPred ,  8,  8, na_mb},               //13  
-    { B_L0_8x4         , 2,  Pred_L0,  8,  4, na_mb},               //14  
-    { B_L0_4x8         , 2,  Pred_L0,  4,  8, na_mb},               //15  
-    { B_L1_8x4         , 2,  Pred_L1,  8,  4, na_mb},               //16  
-    { B_L1_4x8         , 2,  Pred_L1,  4,  8, na_mb},               //17  
-    { B_Bi_8x4         , 2,  BiPred ,  8,  4, na_mb},               //18  
-    { B_Bi_4x8         , 2,  BiPred ,  4,  8, na_mb},               //19  
-    { B_L0_4x4         , 4,  Pred_L0,  4,  4, na_mb},               //20  
-    { B_L1_4x4         , 4,  Pred_L1,  4,  4, na_mb},               //21  
-    { B_Bi_4x4         , 4,  BiPred ,  4,  4, na_mb}                //22  
+{
+/*  |sub_type          |Num |premode|width|height|
+    |                  |Sub |       |     |      |
+    |0                 |Part|2      |3    |4     |*/
+    { P_L0_8x8         ,   1,Pred_L0,    8,     8, na_mb},//0  
+    { P_L0_8x4         ,   2,Pred_L0,    8,     4, na_mb},//1  
+    { P_L0_4x8         ,   2,Pred_L0,    4,     8, na_mb},//2  
+    { P_L0_4x4         ,   4,Pred_L0,    4,     4, na_mb},//3  
+    { inferred_mb_type ,   4,Direct ,    4,     4, na_mb},//
+    { B_Direct_8x8     ,   4,Direct ,    4,     4, na_mb},//10  
+    { B_L0_8x8         ,   1,Pred_L0,    8,     8, na_mb},//11  
+    { B_L1_8x8         ,   1,Pred_L1,    8,     8, na_mb},//12  
+    { B_Bi_8x8         ,   1,BiPred ,    8,     8, na_mb},//13  
+    { B_L0_8x4         ,   2,Pred_L0,    8,     4, na_mb},//14  
+    { B_L0_4x8         ,   2,Pred_L0,    4,     8, na_mb},//15  
+    { B_L1_8x4         ,   2,Pred_L1,    8,     4, na_mb},//16  
+    { B_L1_4x8         ,   2,Pred_L1,    4,     8, na_mb},//17  
+    { B_Bi_8x4         ,   2,BiPred ,    8,     4, na_mb},//18  
+    { B_Bi_4x8         ,   2,BiPred ,    4,     8, na_mb},//19  
+    { B_L0_4x4         ,   4,Pred_L0,    4,     4, na_mb},//20  
+    { B_L1_4x4         ,   4,Pred_L1,    4,     4, na_mb},//21  
+    { B_Bi_4x4         ,   4,BiPred ,    4,     4, na_mb} //22  
 };
 static uint8_t coded_blokc_flag_maxNumCoeff[14] = {16,15,16,udf,15,64,6,5,6,4,6,5,6,4};
 static uint8_t ctxIncForCtxBlockCat[63][3] = {

@@ -55,7 +55,7 @@ Debug::Debug(const char* filename_config)
     lua_settop(L, 0);
     //对于控制符的强制控制等处理由lua的函数来完成
     //入栈一次获得配置的函数，结果在lua的栈中
-    lua_getglobal(L, "get_conf");
+    lua_getglobal(L, "Get_conf");
     int config_length = 19;
     //调用这个函数，返回到lua栈中
     lua_pcall(L, 0,config_length,0);

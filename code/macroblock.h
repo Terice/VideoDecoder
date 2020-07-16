@@ -1,4 +1,4 @@
-#ifndef MACROBLOCK_H__
+﻿#ifndef MACROBLOCK_H__
 #define MACROBLOCK_H__
 
 
@@ -10,7 +10,7 @@ class residual;
 class picture;
 class Parser;
 class Slice;
-
+ 
 class macroblock
 {
 private:
@@ -24,6 +24,7 @@ private:
     //直接修改宏块的预测值，
     void Prediction_Inter(matrix& out, uint8_t mbPartIdx, uint8_t subMbPartIdx, uint8_t width_part, uint8_t height_part, picture* idx_ref, matrix* mv_lx, bool predFlag);
     int Prediction_Inter_LumaSampleInterpolation(int xIntL, int yIntL, int xFracL, int yFracL, picture* ref_pic);
+    int Prediction_Inter_Direct(int ,int);
 
     uint8_t residual_mode;
     //4x4预测方式，一共16个
@@ -76,7 +77,9 @@ private:
     uint8_t get_numpart();
 
     MbTypeName get_type();
-
+    
+    bool* predFlagL0;
+    bool* predFlagL1;
 public:
     Slice* up_slice;
     bool  TransformBypassModeFlag;
@@ -92,9 +95,9 @@ public:
     uint8_t  id_slice;
     uint16_t idx_inslice;
 
-    uint8_t constrained_intra_pred_flag;
+    uint8_t constrained_intra_pred_flag;//帧内预测的限制条件
     //syntax elements
-    uint16_t mb_skip_flag;           //已经在宏块中得到
+    uint16_t mb_skip_flag;           
     uint16_t mb_field_decoding_flag; //from slice  not get yet !!!!!! in slice.cpp  line183
     uint8_t coded_block_pattern;   
     uint8_t CodedBlockPatternLuma;

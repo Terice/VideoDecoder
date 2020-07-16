@@ -1067,9 +1067,7 @@ int cabac::read_mvd_lx(int syntaxelements)
         else
         {
             //这俩还有两个帧场的条件
-            absMvdCompN = Abs(mvd_lX[mbPartIdxN]\
-                                                [subMbPartIdxN]\
-                                                                [spatialDirection]);
+            absMvdCompN = Abs(mvd_lX[mbPartIdxN][subMbPartIdxN][spatialDirection]);
         }
         return absMvdCompN;
     };

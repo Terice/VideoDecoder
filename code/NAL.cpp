@@ -204,8 +204,6 @@ uchar** NAL::decode_PIC()
     sl1->PraseSliceHeader();
     Slicetype sl1_type = sl1->get_type();
     
-    if(sl1->get_index() == 16)
-        int a = 0;
     
 
     //每次解完头，把frame_num这个句法赋值给pic，然后用decoder去解picture numbers
@@ -220,7 +218,9 @@ uchar** NAL::decode_PIC()
     decoder->init_RefPicList();
 
     //修改
-    decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l0_active_minus1, true);
+    //操作符在 decoder 中已经指定和如何移除，所以这里不用做是否启用这个函数的判定
+    decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l0_active_minus1, 0);
+    decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l1_active_minus1, 1);
 
     //至此参考列表建立完成
     //去掉解码队列中无用的帧

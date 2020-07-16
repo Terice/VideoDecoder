@@ -47,7 +47,7 @@ public:
     picture* get_DeocdePic (int i){return list_Decoded[i];};
     picture* get_Ref0PicByI(int i){return *(list_Ref0.end() - i - 1);};
     picture* get_Ref1PicByI(int i){return *(list_Ref1.end() - i - 1);};
-
+    picture* get_LastRef(){return list_Ref.size()>0?list_Ref.back():NULL;}
     void set_CurSlcie(Slice* to){cur_slice = to;}
     //解码队列
     //没有维护，遇到IDR图片就刷新，除此之外不停把新解码图片指针加入到队列尾
@@ -65,9 +65,10 @@ public:
     bool ctrl_FIFO(int);
     std::vector<int> opra_MMOC;
     bool ctrl_MMOC();
-    
+    int PicOrderCntMsb;
     //第一个是最大pic数量，第二个是当前pic的picnum
-    bool opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_idx_lX_active_minus1, bool);
+    //最后一个bool值的意思就是listX中的X取值
+    bool opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_idx_lX_active_minus1, char X);
     std::vector<int> opra_ModS;
 
     //打印参考列表

@@ -274,7 +274,7 @@ macroblock* picture::get_PartNeighbour(macroblock* mb_current, char direction, i
     return R;
 }
 
-int picture::get_MvNeighbour(macroblock* mb_curren, uint8_t mbPartIdx, uint8_t subMbPartIdx, int refIdxLX_fail, uint8_t listSuffixFlag, matrix* mv_lX)
+int picture::get_MvNeighbour(macroblock* mb_curren, uint8_t mbPartIdx, uint8_t subMbPartIdx, uint8_t listSuffixFlag, matrix* mv_lX)
 {
     macroblock* A = NULL;int mbPartIdx_A = -1;int subMbPartIdx_A = -1;int refIdxLX_A = -1;int mv_lx_A[2];
     macroblock* B = NULL;int mbPartIdx_B = -1;int subMbPartIdx_B = -1;int refIdxLX_B = -1;int mv_lx_B[2];
@@ -429,7 +429,6 @@ picture::picture(int widthInMB, int heightInMB, int type)
     FrameNumWrap = 0;
     TopFieldOrderCnt = 0;
     BottomFieldOrderCnt = 0;
-    PicOrderCntMsb = 0;
     memory_management_control_operation = 0;
     LongTermFrameIdx = -1;
 }

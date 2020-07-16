@@ -33,6 +33,8 @@ public:
     int POC;
     int TopFieldOrderCnt;
     int BottomFieldOrderCnt;
+    
+    int pic_order_cnt_lsb;
     int PicOrderCntMsb;
     //内存控制标志
     uint8_t memory_management_control_operation;
@@ -59,6 +61,7 @@ public:
     //|
     //|y
     uint8_t get_SampleXY(int x, int y, int mode);
+    macroblock* get_MBXY(int x, int y){return (*mb_inpic)[x][y];};
     //get the neighbour macroblock with the mode such as 'A' or 'B' etc
     macroblock* get_MBneighbour(macroblock* mb_curren, char direction);
     //return the macroblock* of the target, and the 4'th parmeter is the result index
@@ -84,7 +87,8 @@ public:
     macroblock* get_PartNeighbour(macroblock* mb_curren, char direction, int mode, int mbPartIdx, int subPartIdx, int& mbPartIdx_result , int& subPartIdx_result);
     //得到这个块的相邻块的运动矢量(在最后一个参数：矩阵指针指向的值 上返回 预测值)
     //返回的值暂时没有任何作用
-    int get_MvNeighbour(macroblock* mb_curren, uint8_t mbPartIdx, uint8_t subMbPartIdx, int refIdxLX, uint8_t listSuffixFlag, class matrix* mv_lX);
+    //参数表:需要计算的宏块 子块索引 子子块索引 预测表的方向 需要返回的运动矢量
+    int get_MvNeighbour(macroblock* mb_curren, uint8_t mbPartIdx, uint8_t subMbPartIdx, uint8_t listSuffixFlag, class matrix* mv_lX);
     //format print the picture in macroblock
     friend std::ostream& operator<<(std::ostream& out ,picture& pic);
 
