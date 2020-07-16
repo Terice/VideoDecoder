@@ -9,7 +9,7 @@
 void Decoder::print_list()
 {
     
-    printf(">>deder:    (direction:----->)  [Frame_num]\n");//(dec_num)
+    printf(">>deder:    \n");//(direction:----->)  [Frame_num]\n");//(dec_num)
     printf("         deocded list :");
     for (uint8_t i = 0; i < list_Decoded.size(); i++)
     {
@@ -19,19 +19,19 @@ void Decoder::print_list()
     printf("         reflist   list :");
     for (uint8_t i = 0; i < list_Ref.size(); i++)
     {
-        printf("%d,",list_Ref[i]->PicNum);
+        printf("%d, ",list_Ref[i]->POC);
     }
     printf("\n");
     printf("         reflist_0 list :");
     for (uint8_t i = 0; i < list_Ref0.size(); i++)
     {
-        printf("%d, ",list_Ref0[i]->PicNum);//, list_Ref0[i]->DecNum);
+        printf("%d, ",list_Ref0[i]->POC);//, list_Ref0[i]->DecNum);
     }
     printf("\n");
     printf("         reflist_1 list :");
     for (uint8_t i = 0; i < list_Ref1.size(); i++)
     {
-        printf("%d(%d), ",list_Ref1[i]->PicNum, list_Ref1[i]->DecNum);
+        printf("%d, ",list_Ref1[i]->POC);//, list_Ref1[i]->DecNum);
     }
     printf("\n");
 }
@@ -84,7 +84,7 @@ bool Decoder::add_ReferenPic(picture* pic_toadd)
 
 bool Decoder::flsh_ListRef()
 {
-    auto flsh_func = [](std::vector<picture*>&  list_toflsh)->bool{
+    auto flsh_func = [](std::vector<picture*>&  list_toflsh){
         std::vector<picture*>::iterator it;
         it = list_toflsh.begin();
         while (it != list_toflsh.end())
@@ -108,13 +108,14 @@ bool Decoder::init_RefPicList()
     flsh_ListRef();
     //建表包含 初始化，排序两个工作,
     Slicetype type = cur_slice->get_type();
+    //清空参考队列
+    list_Ref0.clear();
+    list_Ref1.clear();
     if(type == P || type == SP)
     {
         std::vector<picture*>::iterator it;
         int i_ref0 = 0;
 
-        //清空参考队列
-        list_Ref0.clear();
         //插入short，先插入short，然后 long ，这样保证 short 自然在 long 的前面
         for(it = list_Ref_short.begin(); it != list_Ref_short.end(); it++)
         {
@@ -143,8 +144,6 @@ bool Decoder::init_RefPicList()
         std::vector<picture*>::iterator it;
         int i_ref = 0;//一个中间变量，用来存储需要排序的节点位置
 
-        //清空参考队列0
-        list_Ref0.clear();
         //插入short,插入的时候做第一步排序，也就是所有的大于当前POC的在末尾追加，小于的在整个小于队列的末尾追加
         for(it = list_Ref_short.begin(), i_ref = 0; it != list_Ref_short.end(); it++)
         {
@@ -177,8 +176,6 @@ bool Decoder::init_RefPicList()
         [](picture* l, picture* r)->bool{return l->LongTermPicNum < r->LongTermPicNum;}\
         );
         
-        //清空参考队列1
-        list_Ref1.clear();
         //list1和list0方法相同，只不过排序的序列不同
         for(it = list_Ref_short.begin(), i_ref = 0; it != list_Ref_short.end(); it++)
         {
@@ -223,7 +220,11 @@ bool Decoder::init_RefPicList()
                 }
             }
             if(re)
-            swap(list_Ref1[0], list_Ref1[1]);
+            {
+                picture* tmp = list_Ref1[0];
+                list_Ref1[0] = list_Ref1[1];
+                list_Ref1[1] = tmp;
+            }
         }
         return false;
     }
@@ -241,7 +242,7 @@ bool Decoder::opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_id
     int picNumLXPred = CurrPicNum;
     int picNumLXNoWrap = 0;
     int picNumLX = 0;
-    std::vector<picture*>& RefPicListX = X?list_Ref0:list_Ref1;
+    std::vector<picture*>& RefPicListX = !X?list_Ref0:list_Ref1;
     int refIdxLX = 0;
 
     if(opra_ModS.size() > 0)
@@ -290,13 +291,15 @@ bool Decoder::opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_id
             {//长期重排
             }
         }
-        //去掉多余的元素，一是超出长度的，一是NULL元素
-        while(RefPicListX.size() > num_ref_idx_lX_active_minus1 + 1 || *(RefPicListX.end()) == NULL)
-        {
-            RefPicListX.pop_back();
-        }
+        
         //删掉用过的操作符
         opra_ModS.erase(opra_ModS.begin(), opra_ModS.begin()+i);
+    }
+    //去掉多余的元素，一是超出长度的，一是NULL元素
+    while(RefPicListX.size() > num_ref_idx_lX_active_minus1 + 1 \
+      || (RefPicListX.size() > 0 && (RefPicListX.back()) == NULL))
+    {
+        RefPicListX.pop_back();
     }
     return true;
 }
@@ -353,6 +356,7 @@ bool Decoder::ctrl_MMOC()
             default:;break;
         }
     }
+    opra_MMOC.clear();
     return true;
 }
 

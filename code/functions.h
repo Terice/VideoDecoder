@@ -17,7 +17,6 @@ inline int8_t Sig(int v){return v >= 0 ? 1 : -1;};
 inline int MinPositive(int x, int y){return (x > 0 && y > 0) ? Min(x, y) : Max(x, y);}
 inline int SixTapFliter(int a, int b, int c, int d, int e, int f){return a - 5 * b + 20 * c + 20 * d - 5 * e + f;}
 inline int InverseRasterScan(int a, int b, int c, int d, int e){ return e == 0?((a%(d/b))*b):((a/(d/b))*c);}
-template <typename T> inline void swap(T& a, T& b){T tmp = a; a = b; b = tmp;};
 
 class macroblock;
 bool Get_PredFlag(macroblock* m, uint8_t mbPartIdx, uint8_t flag);

@@ -288,12 +288,12 @@ uchar** NAL::decode_PIC()
         decoder->add_ReferenPic(pic);
     }
 
-    if(sl1_type != B) 
+    if(1)//&& sl1_type != B) 
     {
         //像素字符化并输出pic
         if(parser->debug->pic_terminalchar())
         {
-            if((type == IDR || type == Non_IDR) && sl1_type != B)
+            if((type == IDR || type == Non_IDR))
             {
                 pic->chs_MbToOutmatrix();
                 std::cout << (*pic) << std::endl;
@@ -303,9 +303,16 @@ uchar** NAL::decode_PIC()
         //nal的基本信息，
         //参考队列
         //slice的基本信息
+        char pictype;
+        if(sl1_type == P) pictype = 'P';
+        else if(sl1_type == B) pictype = 'B';
+        else if(sl1_type == I) pictype = 'I';
+        else pictype = 'N';
+
         if(parser->debug->nal_info())
         {
             printf(">>nal  : type: %s, ref_idc: %2d, \n", type==IDR?"IDR":"NONE_IDR", nal_ref_idc);
+            printf(">>pic  : type %C\n", pictype);
             decoder->print_list();
             printf(">>slice: type: %2d, index: %2d\n", sl1->get_type(), sl1->get_index());
             printf("----nal divide line----\n\n");

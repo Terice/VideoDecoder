@@ -269,6 +269,8 @@ void Slice::PraseSliceHeader()
     else ps->MaxPicNum = 2 * parser->pV->MaxFrameNum; 
     if(ps->field_pic_flag == 0) ps->CurrPicNum = ps->frame_num; 
     else ps->CurrPicNum = 2 * ps->frame_num - 1; 
+
+    Calc_POC();
 };
 uint32_t NextMbAddress(uint32_t add){return 0;}
 uint32_t more_rbsp_data(){return 1;}
@@ -382,7 +384,6 @@ void Slice::PraseSliceDataer()
     }while(moreDataFlag);
     parser->slice_idx += 1;
     parser->cabac_core->slice_end();
-    Calc_POC();
 };
 
 void Slice::Calc_POC()
