@@ -242,7 +242,7 @@ bool matrix::operator>>(matrix& right)
 }
 bool matrix::operator<<(matrix& right)
 {
-    if( right.data == NULL)
+    if(right.data == NULL)
         return false;
     else
     {
@@ -305,12 +305,12 @@ matrix::matrix(int r_length, int c_length):array2d<int>(r_length, c_length)
     x_length = r_length;
     y_length = c_length;
 }
-matrix::~matrix()
+
+matrix::matrix():array2d<int>()
 {
     
 }
-
-matrix::matrix():array2d<int>()
+matrix::~matrix()
 {
     
 }

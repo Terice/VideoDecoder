@@ -40,6 +40,7 @@ void Slice::PraseSliceHeader()
         ps->pic_order_cnt_lsb                = parser->read_un(v);
         if(ps->pps->bottom_field_pic_order_in_frame_present_flag && !ps->field_pic_flag)
             ps->delta_pic_order_cnt_bottom   = parser->read_se();
+        else ps->delta_pic_order_cnt_bottom  = 0;
     }
     if(ps->sps->pic_order_cnt_type == 1 && !ps->sps->delta_pic_order_always_zero_flag){
         ps->delta_pic_order_cnt[0]           = parser->read_se();
@@ -379,6 +380,7 @@ void Slice::PraseSliceDataer()
             {
                 ps->end_of_slice_flag = parser->read_ae(276);            //片结束标记
                 moreDataFlag = !ps->end_of_slice_flag;  //如果片结束，那么moreDataFlag为0，此循环之后停止运行
+                //if(ps->end_of_slice_flag == 1)  printf(">>slice: end mb: (%d,%d)\n", mb->position_x, mb->position_y);
             }
         }
     }while(moreDataFlag);
@@ -422,9 +424,13 @@ void Slice::Calc_POC()
         }
         //calc PicOrderCntMsb
         if((pic_order_cnt_lsb < prevPicOrderCntLsb) && (prevPicOrderCntLsb - pic_order_cnt_lsb >= (ps->MaxPicOrderCntLsb / 2)))
-        {cur->PicOrderCntMsb = prevPicOrderCntMsb + ps->MaxPicOrderCntLsb;}
+        {
+            cur->PicOrderCntMsb = prevPicOrderCntMsb + ps->MaxPicOrderCntLsb;
+        }
         else if((pic_order_cnt_lsb > prevPicOrderCntLsb) && (pic_order_cnt_lsb - prevPicOrderCntLsb > (ps->MaxPicOrderCntLsb / 2)))
-        {cur->PicOrderCntMsb = prevPicOrderCntMsb - ps->MaxPicOrderCntLsb;}
+        {
+            cur->PicOrderCntMsb = prevPicOrderCntMsb - ps->MaxPicOrderCntLsb;
+        }
         else cur->PicOrderCntMsb = prevPicOrderCntMsb;
         //如果不是底场 TopFieldOrderCnt 由下式给出
         cur->TopFieldOrderCnt = cur->PicOrderCntMsb + pic_order_cnt_lsb;
@@ -432,8 +438,6 @@ void Slice::Calc_POC()
         if(!ps->field_pic_flag) cur->BottomFieldOrderCnt = cur->TopFieldOrderCnt + ps->delta_pic_order_cnt_bottom;
         else cur->BottomFieldOrderCnt = cur->PicOrderCntMsb + ps->pic_order_cnt_lsb;
     }
-
-
     cur->POC = Min(cur->TopFieldOrderCnt, cur->BottomFieldOrderCnt);
 }
 //这里只是做了frame的返回，还有其他的情况没有写：自适应 和 场

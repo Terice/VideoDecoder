@@ -1,8 +1,8 @@
 cpi=g++
 bin=../bin
 ofile=../ofile
-CFLAGS+= -g -c 
-LDFLAGS+= -llua5.1 -std=c++11
+CFLAGS+= -g -c #-std=c++11
+LDFLAGS+= -llua5.1 
 #target=../bin/a
 target=a
 

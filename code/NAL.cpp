@@ -5,8 +5,7 @@
 #include "cabac.h"
 #include "slice.h"
 #include "picture.h"
-using std::endl;
-using std::cout;
+
 #include <cmath>
 
 #include "Decoder.h"
@@ -25,7 +24,7 @@ bool NAL::decode()
         case IDR:decode_PIC();break;
         case PPS:decode_PPS();break;
         case SPS:decode_SPS();break;
-        default:printf("error or nowrite nal");break;
+        default:printf("error or nowrite nal\n");break;
     }
     return true;
 }
@@ -185,9 +184,12 @@ void NAL::decode_PPS()
 }
 uchar** NAL::decode_PIC()
 {
-    //
+
     //如果是IDR，清空所有队列的所有pic指针，释放所有的pic内存
     if(type == IDR) decoder->clear_DecodedPic();
+
+    //去掉解码队列中无用的帧
+    decoder->ctrl_Memory();
 
     picture* picture_cur = new picture(parser->pS->sps->pic_width_in_mbs_minus1+1, parser->pS->sps->pic_height_in_map_units_minus1+1, type == IDR ? 1 : 0);
     this->pic = picture_cur;
@@ -203,7 +205,6 @@ uchar** NAL::decode_PIC()
     decoder->set_CurSlcie(sl1);
     sl1->PraseSliceHeader();
     Slicetype sl1_type = sl1->get_type();
-    
     
 
     //每次解完头，把frame_num这个句法赋值给pic，然后用decoder去解picture numbers
@@ -223,8 +224,6 @@ uchar** NAL::decode_PIC()
     decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l1_active_minus1, 1);
 
     //至此参考列表建立完成
-    //去掉解码队列中无用的帧
-    decoder->ctrl_Memory();
 
     //slice数据块解码依赖于参考列表所以放在参考列表建立完之后
     sl1->PraseSliceDataer();
@@ -287,39 +286,34 @@ uchar** NAL::decode_PIC()
         //标记完毕，加入到参考队列中并分别加入参考表
         decoder->add_ReferenPic(pic);
     }
+    
 
-    if(1)//&& sl1_type != B) 
+    //像素字符化并输出pic
+    if(parser->debug->pic_terminalchar())
     {
-        //像素字符化并输出pic
-        if(parser->debug->pic_terminalchar())
+        if((type == IDR || type == Non_IDR))
         {
-            if((type == IDR || type == Non_IDR))
-            {
-                pic->chs_MbToOutmatrix();
-                std::cout << (*pic) << std::endl;
-            }
+            pic->chs_MbToOutmatrix();
+            decoder->out_DecodedPic();
+            // std::cout << *pic << std::endl;
         }
-        //输出:
-        //nal的基本信息，
-        //参考队列
-        //slice的基本信息
+    }
+    
+    if(parser->debug->nal_info())
+    {
         char pictype;
         if(sl1_type == P) pictype = 'P';
         else if(sl1_type == B) pictype = 'B';
         else if(sl1_type == I) pictype = 'I';
         else pictype = 'N';
-
-        if(parser->debug->nal_info())
-        {
-            printf(">>nal  : type: %s, ref_idc: %2d, \n", type==IDR?"IDR":"NONE_IDR", nal_ref_idc);
-            printf(">>pic  : type %C\n", pictype);
-            decoder->print_list();
-            printf(">>slice: type: %2d, index: %2d\n", sl1->get_type(), sl1->get_index());
-            printf("----nal divide line----\n\n");
-        }
+        printf(">>nal  : type: %s, ref_idc: %2d, \n", type==IDR?"IDR":"NONE_IDR", nal_ref_idc);
+        printf(">>pic  : type %C\n", pictype);
+        decoder->print_list();
+        printf(">>slice: type: %2d, index: %2d\n", sl1->get_type(), sl1->get_index());
+        printf("----nal divide line----\n\n");
     }
-    
     Sdelete_s(sl1);
+
     return NULL;
 }
 

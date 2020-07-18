@@ -75,7 +75,7 @@ public:
     uint64_t read_ae(int);
 
     //从当前缓冲区中读入一个char，会强制对齐
-    uchar read_ch();
+    short read_ch();
 
     void rfsh();
     //以熵编码标志位做选择的两种读取方式

@@ -88,9 +88,9 @@ void macroblock::Init0(int mode)
     {
         predFlagL0 = new bool[1]{true};
         predFlagL1 = NULL;
-        mvd_l0       = new matrix[num_MBpart];
+        mvd_l0       = new matrix[num_MBpart]();
         for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l0[i] << init;}
-        mv_l0       = new matrix[num_MBpart];
+        mv_l0       = new matrix[num_MBpart]();
         for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mv_l0[i] << init;}
         mvd_l1       = NULL;
         mv_l1        = NULL;
@@ -104,15 +104,15 @@ void macroblock::Init0(int mode)
     {
         predFlagL0 = new bool[4];
         predFlagL1 = new bool[4];
-        mvd_l0       = new matrix[num_MBpart];
-        for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l0[i] << init;}
-        mvd_l1       = new matrix[num_MBpart];
-        for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l1[i] << init;}
+        // mvd_l0       = new matrix[num_MBpart];
+        // for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l0[i] << init;}
+        // mvd_l1       = new matrix[num_MBpart];
+        // for (uint8_t i = 0; i < num_MBpart; i++){matrix init(1,2,0); mvd_l1[i] << init;}
             
-        mv_l0       = new matrix[num_MBpart];
-        for (uint8_t i = 0; i < num_MBpart; i++){matrix init(4,2,0); mv_l0[i] << init;}
-        mv_l1       = new matrix[num_MBpart];
-        for (uint8_t i = 0; i < num_MBpart; i++){matrix init(4,2,0); mv_l1[i] << init;}
+        mv_l0       = new matrix[4]();
+        for (uint8_t i = 0; i < 4; i++){matrix init(4,2,0); mv_l0[i] << init;}
+        mv_l1       = new matrix[4]();
+        for (uint8_t i = 0; i < 4; i++){matrix init(4,2,0); mv_l1[i] << init;}
         ref_idx_l0 = new int[4]();
         ref_idx_l1 = new int[4]();
         //B_Skip需要进行并置块的选择和计算
@@ -208,7 +208,7 @@ void macroblock::Parse(int mode)
                 if(type >= 50 && type <= 74) sub_type += 10;//+= 10是在枚举类型中加上B块的偏移
                 sub_mb_type[mbPartIdx] = (SubMbTypeName)sub_type;
             }
-
+            
             for(mbPartIdx = 0; mbPartIdx < num_MBpart; mbPartIdx++)
             {
                 predFlagL0[mbPartIdx] = Get_PredFlag(this, mbPartIdx, 0);
@@ -247,12 +247,12 @@ void macroblock::Parse(int mode)
                         mv_l0[mbPartIdx][subMbPartIdx][0] += mvd_l0[mbPartIdx][subMbPartIdx][0];
                         mv_l0[mbPartIdx][subMbPartIdx][1] += mvd_l0[mbPartIdx][subMbPartIdx][1];
                     }
-                else
+                else if(sub_mb_type[mbPartIdx] == B_Direct_8x8)
                 {
-                    //B_Direct_8x8
-                    Prediction_Inter_Direct(mbPartIdx, 0);
-                    ref_idx_l0[mbPartIdx] = 0;
-                    ref_idx_l1[mbPartIdx] = 0;
+                    for(uint8_t subMbPartIdx = 0; subMbPartIdx < 4; subMbPartIdx++)
+                    {
+                        Prediction_Inter_Direct(mbPartIdx, subMbPartIdx);
+                    }
                 }
                 
             }
@@ -277,11 +277,12 @@ void macroblock::Parse(int mode)
                         mv_l1[mbPartIdx][subMbPartIdx][1] += mvd_l1[mbPartIdx][subMbPartIdx][1];
                         pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 1, mv_l1);
                     }
-                else //B_direct_8x8预测 
+                else if(sub_mb_type[mbPartIdx] == B_Direct_8x8)
                 {
-                    Prediction_Inter_Direct(mbPartIdx, 0);
-                    ref_idx_l0[mbPartIdx] = 0;
-                    ref_idx_l1[mbPartIdx] = 0;
+                    for(uint8_t subMbPartIdx = 0; subMbPartIdx < 4; subMbPartIdx++)
+                    {
+                        Prediction_Inter_Direct(mbPartIdx, subMbPartIdx);
+                    } 
                 }
             }
             //--------------------------------------------------------子宏块预测结束
@@ -622,7 +623,20 @@ void macroblock::Decode(int index)
                 //如果有子子块，那么循环的最大值增加为子子块的数量，否则为1（当前子块）
                 uint8_t subMbPart;
                 if(type != B_Direct_16x16 && type != B_Skip)
-                subMbPart = num_MBpart == 4 ? Get_SubNumMbPart(sub_mb_type[mbPartIdx]) : 1;
+                {
+                    if(num_MBpart == 4)
+                    {
+                        if(sub_mb_type[mbPartIdx] == B_Direct_8x8)
+                            subMbPart = 4;
+                        else
+                            subMbPart = Get_SubNumMbPart(sub_mb_type[mbPartIdx]);
+                    }
+                    else
+                    {
+                        subMbPart = 1;
+                    }
+                    
+                }
                 else//B_Direct_16x16 和 B_Skip 不会有子子块类型这个属性，子子块都是直接推导出本身的数据
                 subMbPart = 1;
 
@@ -712,21 +726,29 @@ void macroblock::Decode(int index)
                     //赋值
                     int mb_partWidth = Get_MbPartWidth(type);
                     int mb_partHeigh = Get_MbPartHeight(type);
+                    int sub_mb_partWidth = 8;
+                    int sub_mb_partHeigh = 8;
                     int xS = 0;
                     int yS = 0;
                     if(type != B_Direct_16x16 && type != B_Skip)
                     {
-                        xS = (mbPartIdx % (16 / mb_partWidth)) * mb_partWidth +\
-                                                                                (num_MBpart == 4 ? ((subPartIdx * Get_SubMbPartWidth(sub_mb_type[mbPartIdx])) % 8) : 0);
-                        yS = (mbPartIdx / (16 / mb_partWidth)) * mb_partHeigh +\
-                                                                                (num_MBpart == 4 ? ((subPartIdx * Get_SubMbPartWidth(sub_mb_type[mbPartIdx])) / 8) : 0);
+                        if(this->num_MBpart == 4)
+                        {
+                            sub_mb_partWidth = Get_SubMbPartWidth (sub_mb_type[mbPartIdx]);
+                            sub_mb_partHeigh = Get_SubMbPartHeight(sub_mb_type[mbPartIdx]);
+                        }
+                        xS = (mbPartIdx % (16 / mb_partWidth)) * mb_partWidth + (num_MBpart == 4 ? \
+                             (subPartIdx% (8  / sub_mb_partWidth) * sub_mb_partWidth) : 0);
+                        yS = (mbPartIdx / (16 / mb_partWidth)) * mb_partHeigh + (num_MBpart == 4 ?\
+                             (subPartIdx/ (8  / sub_mb_partWidth) * sub_mb_partWidth) : 0);
                     }
                     else
                     {
                         xS = (mbPartIdx % (16 / mb_partWidth)) * mb_partWidth;                                
                         yS = (mbPartIdx / (16 / mb_partWidth)) * mb_partHeigh;
                     }
-                    
+                    if(type == B_8x8)
+                        int a = 0;
                     for(uint8_t yL = 0; yL < height; yL++)
                     {
                         for(uint8_t xL = 0; xL < width; xL++)
@@ -883,12 +905,14 @@ int macroblock::Prediction_Inter_Direct(int mbPartIdx, int subMbPartIdx)
     int refIdxCol = 0;
     Decoder* de = up_slice->decoder;
     picture* colPic = NULL;
-
+    macroblock* mbAddrCol = NULL;
     //推导并置pic，和并置宏块
+
     //临时采用的推导方式
+    
     colPic = de->list_Ref1[0];//选择参考表1的第一帧作为并置pic
     //选择和当前宏块同一位置的宏块作为并置宏块
-    macroblock* mbAddrCol = colPic->get_MBXY(position_x, position_y);
+    mbAddrCol = colPic->get_MBXY(position_x, position_y);
 
     int luma4x4BlkIdx = 0;//用来推导子块索引
     if(parser_g->pS->sps->direct_8x8_inference_flag) luma4x4BlkIdx = 5*mbPartIdx;
@@ -900,18 +924,19 @@ int macroblock::Prediction_Inter_Direct(int mbPartIdx, int subMbPartIdx)
     }
 
     //时空预测
-    if(up_slice->ps->direct_spatial_mv_pred_flag)//空间预测
-    {
+    // if(up_slice->ps->direct_spatial_mv_pred_flag)//空间预测
+    // {
         //这里有两种情况
         //1、宏块随着周围的宏块一起运动
         pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 0, mv_l0);
         pic->get_MvNeighbour(this, mbPartIdx, subMbPartIdx, 1, mv_l1);
         //2、宏块静止不动
 
+        //参考索引简单都设置为0
         ref_idx_l0[mbPartIdx] = 0;
         ref_idx_l1[mbPartIdx] = 0;
 
-        //是必须会有一个参考方向的，要么双向，不会没有参考方向
+        //是必须会有一个参考方向的，要么双向或者单向参考，不会没有参考方向
         if(ref_idx_l0[mbPartIdx] >= 0 && ref_idx_l1[mbPartIdx] >= 0)    
         {
             predFlagL0[mbPartIdx] = 1; predFlagL1[mbPartIdx] = 1;
@@ -924,14 +949,17 @@ int macroblock::Prediction_Inter_Direct(int mbPartIdx, int subMbPartIdx)
         {
             predFlagL0[mbPartIdx] = 0; predFlagL1[mbPartIdx] = 1;
         }
-    }
-    else//时间预测
-    {
-        printf("时间预测没有写\n");
-        exit(0);
-    }
+    // }
+    // else//时间预测(还没有写，所以全部是采用空间预测随周围运动)
+    // {
+    //    
+    // }
+
+
+    //
     //对于 B_Direct_8x8 这里解码完毕
     //对于 B_Direct_16x16 B_Skip 这个函数需要分别执行4次
+    //实际上分别是4次(B_Direct_8x8)和16次(B_Direct_16x16 和 B_Skip)，做了简化
     //到这里运动矢量、参考索引、预测标志位 就已经解码完毕
 
     
@@ -1492,6 +1520,8 @@ macroblock::macroblock(Slice* parent, Parser* parser)
     CodedBlockPatternChroma = 0;
     predFlagL0 = NULL;
     predFlagL1 = NULL;
+
+    re = NULL;
 }
 macroblock::~macroblock()
 {
@@ -1510,8 +1540,8 @@ macroblock::~macroblock()
     Sdelete_l(ref_idx_l0 );
     Sdelete_l(ref_idx_l1 );
 
-    Sdelete_l(mv_l0  );
-    Sdelete_l(mv_l1  );
+    Sdelete_l(mv_l0 );
+    Sdelete_l(mv_l1 );
     Sdelete_l(mvd_l0);
     Sdelete_l(mvd_l1);
 

@@ -300,7 +300,7 @@ void residual::Decode_Intra16x16()
     tmp *= c;
     tmp *= *decoder->matrix_4x4Trans;
     c << tmp;
-    // //上面的优化对速度没有多少提高
+    // //上面的优化对速度没有多少提高-,-
 
     //原本使用符号重载的抽象公式，但是每次都需要值拷贝两次，所以拆开成多个公式，直接在左值做修改，
     if(qP >= 36)
@@ -602,8 +602,6 @@ void residual::residual_block_cabac(block* bl, int requestVlaue, uint8_t startId
                 if(coeffLevel[i] > 1  || coeffLevel[i] <  -1)b++;
             }
         }
-        // delete[](int32_t*) coeff_abs_level_minus1; coeff_abs_level_minus1 = NULL;
-        // delete[](int32_t*) coeff_sign_flag       ; coeff_sign_flag = NULL;
     }
     for (uint16_t i = 0; i < length; i++) {bl->set_blockValue(i, coeffLevel[i]);}
 
@@ -612,10 +610,6 @@ void residual::residual_block_cabac(block* bl, int requestVlaue, uint8_t startId
         printf(">>residu:result of cabac is: \n");
         for (uint16_t i = 0; i < length; i++) {printf(" index %2d, value : %d\n", i, coeffLevel[i]);}
     }
-
-    // delete[] coeffLevel                 ;
-    // delete[] significant_coeff_flag     ;
-    // delete[] last_significant_coeff_flag;
 }
 residual::residual(macroblock* ma, Parser* pa)
 {
@@ -630,6 +624,11 @@ residual::residual(macroblock* ma, Parser* pa)
     cabacFlag = pa->pS->pps->entropy_coding_mode_flag;
     if(!cabacFlag) residual_block = &residual::residual_block_cavlc;
     else residual_block = &residual::residual_block_cabac;
+    luma = NULL;
+    chroma = NULL;
+    residual_Y = NULL;
+    residual_U = NULL;
+    residual_V = NULL;
 }
 residual::~residual()
 {

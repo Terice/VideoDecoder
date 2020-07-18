@@ -93,6 +93,7 @@ public:
     friend std::ostream& operator<<(std::ostream& out ,picture& pic);
 
     bool chs_MbToOutmatrix();
+    
     picture(int widthInSamples, int heightInsamples, int type);
     ~picture();
 };

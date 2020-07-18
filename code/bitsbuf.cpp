@@ -22,11 +22,16 @@ static const uint16_t me_chart03[16][2] = {
     {  9, 9 }
 };
 
-u_char Bitsbuf::bread_ch()
+//读入一个char
+short Bitsbuf::bread_ch()
 {
-    u_char result = 0;
+    short result = 0;
     //强制对齐一次
     bread_al();
+    //如果结束位不是最大位，并且当前位大于结束位(也就是说出现了EOF)
+    //那么返回-1
+    if(eofsize < 8 * MAXBUFSIZE && buf_index >= eofsize)
+        return -1;
     //如果是在边界,那么刷新一次缓存区
     if(buf_index == MAXBUFSIZE * 8) 
         bfrsh();
@@ -120,13 +125,15 @@ void Bitsbuf::bufin(FILE* fp)
 {
     if(fp != NULL) 
     {
-        char ch = 0;
+        int ch = 0;
         for(uint8_t count = 0;count < MAXBUFSIZE;count++)
         {
             ch = fgetc(fp);
+            if(ch == EOF) 
+                eofsize = count * 8;
+
+            //去掉防止竞争字节的状态机
             //0表示正常，1表示出现第一个0x00， 2表示出现第二个0x00并且等待下一个03   3表示出现03   4表示出现 0x01 或者 0x02 或者 0x03
-            if(state == 2 && ch == 3)
-                int a = 0;
             switch (state)
             {
             case 0:if(ch == 0) state = 1; break;
@@ -136,7 +143,6 @@ void Bitsbuf::bufin(FILE* fp)
             default:state = 0; break;
             }
             //如果出现防止竞争序列，索引后退一个char，当前字符读入0x03位置上，然后count自增
-            
             if(state == 4)
             {
                 count--;
@@ -145,14 +151,18 @@ void Bitsbuf::bufin(FILE* fp)
                 if(ch == 0) state = 2;
                 else state = 0;
             }
-            
-            buf_data[count] = ch;
+            buf_data[count] = (u_char)ch;
         }
-        //如果最后一个字节是危险的字节，那么尝试读取下一个字符
+        //如果最后一个字节是危险的字节，
+        //那么尝试读取下一个字符来判断这个字节是否应该去掉
         if(state == 3)
         {
             ch = fgetc(fp);
-            if(ch == 1 || ch == 2 || ch == 3 || ch == 0){buf_data[MAXBUFSIZE - 1] = ch;state = 0;}
+            if(ch == 1 || ch == 2 || ch == 3 || ch == 0)
+            {
+                buf_data[MAXBUFSIZE - 1] = (u_char)ch;
+                state = 0;
+            }
             else {fseek(fp, -1L, SEEK_CUR);}
         }
     }
@@ -255,6 +265,7 @@ Bitsbuf::Bitsbuf()
 }
 Bitsbuf::Bitsbuf(FILE* datares)
 {
+    eofsize = MAXBUFSIZE * 8;
     state = 0;
     cout<<"data res is: "<<(FILE*)datares<<endl;
     this->datares = datares;

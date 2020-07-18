@@ -55,7 +55,7 @@ DE_PIC_TERMINATECHAR             = 1
 --所有的和时间有关的打印
 DE_TIMER                         = 0
 --NAL信息的打印
-DE_NAL_INFO                      = 1
+DE_NAL_INFO                      = 0
 Get_conf = function ()
     print(">>script:")
     print("         DE_CABAC_STATE          :"..DE_CABAC_STATE          ) 

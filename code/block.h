@@ -27,7 +27,6 @@ public:
     block(int init_length);
     block();
     ~block();
-    void freeblock(block* blockToFree);
 };
 
 

@@ -122,11 +122,11 @@ bool cabac::DecodeValueUsingCtxIdx(uint16_t ctxIdx_value, uint8_t bypassFlag_val
                 printf("state: %5d\t", pStateIdx);
                 printf("codIRang: %5d\t", codIRange);
                 printf("codIRangeLPS: %5d\n", rangeTabLPS[pStateIdx][qCodIRangeIdx]);
-                printf("         state(%3d)----->", pStateIdx);
-                if(codIOffset >= codIRange)
-                printf("MPS(%3d)\n", transIdxMPS[pStateIdx]);
-                else
-                printf("LPS(%3d)\n", transIdxLPS[pStateIdx]);
+                // printf("         state(%3d)----->", pStateIdx);
+                // if(codIOffset >= codIRange)
+                // printf("MPS(%3d)\n", transIdxMPS[pStateIdx]);
+                // else
+                // printf("LPS(%3d)\n", transIdxLPS[pStateIdx]);
 
             }
             codIRange = codIRange - codIRangeLPS;
@@ -1048,13 +1048,14 @@ int cabac::read_mvd_lx(int syntaxelements)
             if(N->type == B_Direct_16x16 || N->type == B_Skip) predModeEqualFlagN = 0;
             else if(N->type == P_8x8 || N->type == B_8x8)
             {
-                if((Get_SubMbPartPredMode(N->sub_mb_type[mbPartIdxN])) != Pred_L && Get_SubMbPartPredMode(N->sub_mb_type[mbPartIdxN]) != BiPred) predModeEqualFlagN = 0;
+                MbPartPredMode subpremode = (MbPartPredMode)Get_SubMbPartPredMode(N->sub_mb_type[mbPartIdxN]);
+                if(subpremode != Pred_L && subpremode != BiPred) predModeEqualFlagN = 0;
                 else predModeEqualFlagN = 1;
             }
             else
             {
                 MbPartPredMode partpremode = Get_MbPartPredMode(N, N->type, mbPartIdxN);
-                if(partpremode != Pred_L && partpremode != BiPred) predModeEqualFlagN = 0;
+                if(partpremode != Pred_L && partpremode != BiPred)predModeEqualFlagN = 0;
                 else predModeEqualFlagN = 1;
             }
         }

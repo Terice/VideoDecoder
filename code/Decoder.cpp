@@ -40,18 +40,18 @@ bool Decoder::clear_DecodedPic()
     //删除存储区的所有数据
     for(uint8_t i = 0; i < list_Decoded.size(); i++)
     {
-        Sdelete_s(list_Decoded[i]);
+        list_Decoded[i]->set_NotUseForRef();
     }
-    //清空所有的队列
-    list_Decoded.clear(); 
+    //清空所有的队列 
     list_Ref.clear(); 
-    list_Ref1.clear();
-    list_Ref0.clear();
+    list_Ref_short.clear();
+    list_Ref_long.clear();
     
     return true;
 };
 
-
+//这个函数用来控制内存，在每次开始解码下一个帧的时候都把之前无用的帧删掉，
+//标记在之前完成，
 bool Decoder::ctrl_Memory()
 {
     std::vector<picture*>::iterator it= list_Decoded.begin();
@@ -64,7 +64,6 @@ bool Decoder::ctrl_Memory()
         }
         else it++;
     }
-    
     return true;
 }
 
@@ -82,6 +81,8 @@ bool Decoder::add_ReferenPic(picture* pic_toadd)
     return true;
 }
 
+//刷新参考表
+//是指刷新所有的资源参考表
 bool Decoder::flsh_ListRef()
 {
     auto flsh_func = [](std::vector<picture*>&  list_toflsh){
@@ -93,6 +94,7 @@ bool Decoder::flsh_ListRef()
             {
                 list_toflsh.erase(it);
             }
+            else
             it++;
         }
     };
@@ -207,6 +209,7 @@ bool Decoder::init_RefPicList()
         std::sort(list_Ref1.begin()+i_ref, list_Ref1.end(), \
         [](picture* l, picture* r)->bool{return l->LongTermPicNum < r->LongTermPicNum;}\
         );
+        //如果两表相同，list1 的前两项交换
         if(list_Ref1.size() > 1 && list_Ref0.size() == list_Ref1.size())
         {
             int size = list_Ref0.size();
@@ -291,7 +294,6 @@ bool Decoder::opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_id
             {//长期重排
             }
         }
-        
         //删掉用过的操作符
         opra_ModS.erase(opra_ModS.begin(), opra_ModS.begin()+i);
     }
@@ -407,7 +409,10 @@ bool Decoder::ctrl_MMOC_4(int max_long_term_frame_idx_plus1)
 bool Decoder::ctrl_MMOC_5()   
 {
     MaxLongTermFrameIdx = -1;
-    //全部标记为不用于参考，但是在下一次初始化的时候就会全部删除，所以这里直接全部清空
+    for (size_t i = 0; i < list_Ref.size(); i++)
+    {
+        list_Ref[i]->set_NotUseForRef();
+    }
     list_Ref.clear();
     list_Ref0.clear();
     list_Ref1.clear();
@@ -435,8 +440,29 @@ bool Decoder::ctrl_FIFO(int max_num_ref_frames)
     }
     return true;
 }
+
+void Decoder::out_DecodedPic()
+{
+    //由栈来管理和输出缓冲的pic
+    //按照 POC 的逆序出栈
+    //按照 解码顺序 入栈(入栈操作在添加解码pic函数中)
+    //这样就能保证 小POC 先输出 大POC 后输出
+    if(pic_current->is_IDR())
+    {
+        count_Out = 0;
+    }
+    while(!list_Out.empty() && list_Out.top()->POC == count_Out)
+    {
+        std::cout << *list_Out.top() << std::endl;
+        list_Out.pop();
+        count_Out+=2;
+    }
+}
 Decoder::Decoder()
 {
+    count_Out = 0;
+    pic_current = NULL;
+    MaxLongTermFrameIdx = 100;
     matrix_4x4Trans = new matrix(4,4,0);
     matrix_2x2Trans = new matrix(2,2,0);
     int t4[16] = 
@@ -453,9 +479,6 @@ Decoder::Decoder()
         1,-1
     };
     (*matrix_2x2Trans).read_from(t2);
-    pic_current = NULL;
-    pic_uprefer = NULL;
-    MaxLongTermFrameIdx = 100;
 }
 Decoder::~Decoder()
 {

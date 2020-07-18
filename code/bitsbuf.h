@@ -31,6 +31,8 @@ private:
     void bufin(uchar* ch);
     void bufin();
     bool bempt();
+
+    int eofsize;//用来标识文件尾所在的缓冲区bit位置
 public:
 
     Bitsbuf();
@@ -40,7 +42,7 @@ public:
     bool bread();
     //读入一个字节
     //会强制对齐一次
-    u_char bread_ch();
+    short bread_ch();
     //判断是否对齐
     bool balgi(){return buf_index % 8 == 0 ? true : false;};
     //强制向后字节位对齐

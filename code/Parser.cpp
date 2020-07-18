@@ -17,7 +17,7 @@ uint64_t Parser::read_te(uint32_t range){return bitstream->bread_te(range);}
 uint64_t Parser::read_ce(){return 0;}
 uint64_t Parser::read_ae(int syntax){return cabac_core->cread_ae(syntax);}
 uint16_t Parser::read_12(){return 0;}
-uchar Parser::read_ch(){return bitstream->bread_ch();};
+short Parser::read_ch(){return bitstream->bread_ch();};
 bool Parser::find_nextNAL()
 {
     // 0 表示没有找到，1 表示找到第一个00， 2 表示找到第二个00 4 表示找到 第三个00 5 表示找到第三个之后的01   6表示找到第二个之后的01
@@ -26,7 +26,9 @@ bool Parser::find_nextNAL()
     read_al();
     while(state != 7)
     {
-        u_char tmp = read_ch();
+        //这里只是找数据，所以可以用short类型
+        short tmp = read_ch();
+        if(tmp == -1) return false;
         /*                            1---------[s6]----------\       .__________.
                                       |                        \----->|  finded  |
             [s0] --0--> [s1] --0--> [s2] --0--> [s4] --1--> [s5]----->|__________|

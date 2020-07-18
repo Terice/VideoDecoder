@@ -43,23 +43,13 @@ bool block::set_blockValue(int i, int value)
     else {this->value[i] = value; return true;}
 }
 
-void block::freeblock(block* blToFree)
-{
-    if(blToFree->childBlock) 
-    {
-        for(size_t i = 0; i < blToFree->childBlockLength; i++) 
-        {
-            if(blToFree->childBlock && blToFree->childBlock[i])
-            freeblock(blToFree->childBlock[i]);
-        }
-    }
 
-    Sdelete_l(value);
-    Sdelete_l(childBlock);
-}
+
 block::block(int a)
 {
-    value = new int[a];
+    if(a != 16 && a != 15 && a != 4 && a != 0)
+        exit(0);
+    value = new int[a]();
     childBlock = NULL;
     childBlockLength = 0;
     length = a;
@@ -75,7 +65,7 @@ block::block()
 }
 block::~block()
 {
-    if(this->childBlock) 
+    if(childBlock) 
     {
         for(size_t i = 0; i < this->childBlockLength; i++) 
         {
