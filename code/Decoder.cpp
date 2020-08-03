@@ -13,7 +13,7 @@ void Decoder::print_list()
     printf("         deocded list :");
     for (uint8_t i = 0; i < list_Decoded.size(); i++)
     {
-        printf("%d, ",list_Decoded[i]->FrameNum);//, list_Decoded[i]->DecNum);
+        printf("%d, ",list_Decoded[i]->POC);//, list_Decoded[i]->DecNum);
     }
     printf("\n");
     printf("         reflist   list :");
@@ -37,15 +37,27 @@ void Decoder::print_list()
 }
 bool Decoder::clear_DecodedPic()
 {
-    //删除存储区的所有数据
+    //释放解码队列的所有缓存数据
     for(uint8_t i = 0; i < list_Decoded.size(); i++)
     {
-        list_Decoded[i]->set_NotUseForRef();
+        Sdelete_s(list_Decoded[i]);
     }
     //清空所有的队列 
+    list_Decoded.clear(); 
+
     list_Ref.clear(); 
     list_Ref_short.clear();
     list_Ref_long.clear();
+
+    list_Ref0.clear(); 
+    list_Ref1.clear(); 
+
+    //清空输出栈
+    while(!list_Out.empty())
+    {
+        list_Out.pop();
+    }
+    
     
     return true;
 };
@@ -54,12 +66,14 @@ bool Decoder::clear_DecodedPic()
 //标记在之前完成，
 bool Decoder::ctrl_Memory()
 {
-    std::vector<picture*>::iterator it= list_Decoded.begin();
+    std::vector<picture*>::iterator it;
+    it = list_Decoded.begin();
     while(it != list_Decoded.end())
     {
-        if(!(*it)->is_UsedForRef())
+        //释放 已经输出的 并且 不用于参考的 pic 或者 标记为不存在的 pic
+        if(!(*it)->is_UsedForRef() && (*it)->state_Out)
         {
-            delete (*it);
+            Sdelete_s(*it);
             it = list_Decoded.erase(it);
         }
         else it++;
@@ -83,36 +97,51 @@ bool Decoder::add_ReferenPic(picture* pic_toadd)
 
 //刷新参考表
 //是指刷新所有的资源参考表
+//从解码队列中拿取参考pic 来初始化参考资源表
+//不直接修改这三个表的原因是：防止已经 delete 的 pic 出现在表中
 bool Decoder::flsh_ListRef()
 {
-    auto flsh_func = [](std::vector<picture*>&  list_toflsh){
-        std::vector<picture*>::iterator it;
-        it = list_toflsh.begin();
-        while (it != list_toflsh.end())
+    // auto flsh_func = [](std::vector<picture*>&  list_toflsh){
+    //     std::vector<picture*>::iterator it;
+    //     it = list_toflsh.begin();
+    //     while (it != list_toflsh.end())
+    //     {
+    //         if((*it) && !(*it)->is_UsedForRef())
+    //         {
+    //             list_toflsh.erase(it);
+    //         }
+    //         else it++;
+    //     }
+    // };
+    list_Ref.clear();
+    list_Ref_short.clear();
+    list_Ref_long.clear();
+    std::vector<picture*>::iterator it;
+    for(it = list_Decoded.begin();it != list_Decoded.end();it++)
+    {
+        if((*it)->is_UsedForRef()) 
         {
-            if((*it) && !(*it)->is_UsedForRef())
-            {
-                list_toflsh.erase(it);
-            }
-            else
-            it++;
+            list_Ref.push_back((*it));
+            if((*it)->is_UsedForShort())
+                list_Ref_short.push_back(*it);
+            else //if((*it)->is_UsedForLong())
+                list_Ref_long.push_back(*it);
         }
-    };
-    flsh_func(list_Ref);
-    flsh_func(list_Ref_short);
-    flsh_func(list_Ref_long);
-    
+    }
     return true;
 }
 bool Decoder::init_RefPicList()
 {
-    //去掉不用于参考的帧，
+    //初始化全部参考帧，长期参考帧，短期参考帧
+    //这个函数在解码pic之前调用，解码pic加入解码队列是在解码pic之后，
+    //所以可以直接从解码队列中获取所需的参考帧
     flsh_ListRef();
+
+    //以下的表是指 参考表0 和 参考表1
     //建表包含 初始化，排序两个工作,
     Slicetype type = cur_slice->get_type();
-    //清空参考队列
+    //清空参考队列0
     list_Ref0.clear();
-    list_Ref1.clear();
     if(type == P || type == SP)
     {
         std::vector<picture*>::iterator it;
@@ -142,6 +171,8 @@ bool Decoder::init_RefPicList()
     }
     else //if(type == B)
     {
+        //B帧还需要清空参考列表1
+        list_Ref1.clear();
         //P 帧中是直接插入参考帧，B帧需要一些处理
         std::vector<picture*>::iterator it;
         int i_ref = 0;//一个中间变量，用来存储需要排序的节点位置
@@ -440,8 +471,7 @@ bool Decoder::ctrl_FIFO(int max_num_ref_frames)
     }
     return true;
 }
-
-void Decoder::out_DecodedPic()
+void Decoder::out_DecodedPic(bool chagpic)
 {
     //由栈来管理和输出缓冲的pic
     //按照 POC 的逆序出栈
@@ -453,9 +483,16 @@ void Decoder::out_DecodedPic()
     }
     while(!list_Out.empty() && list_Out.top()->POC == count_Out)
     {
-        std::cout << *list_Out.top() << std::endl;
-        list_Out.pop();
-        count_Out+=2;
+        if(chagpic)//是否输出字符画的控制
+        {
+            list_Out.top()->print_complete();
+            list_Out.top()->chs_MbToOutmatrix();      //pic字符化
+            std::cout << *list_Out.top() << std::endl;//输出pic
+        }
+        // printf(">>decder: current out pic : POC:%4d\n", list_Out.top()->POC);
+        list_Out.top()->state_Out = true;//输出之后的 pic 输出状态全部变为 已经输出
+        list_Out.pop();                  //已经输出的pic出栈
+        count_Out+=2;                    //输出计数自增2（帧模式是两场，所以递增步长是2）
     }
 }
 Decoder::Decoder()

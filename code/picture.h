@@ -20,6 +20,7 @@ private:
     array2d<char>* out_CharMatrix;
 public:
 
+    //这个值用来指明当前pic的预测状态， 用枚举值来表示
     RefState state_Ref;
     int DecNum;
 
@@ -38,19 +39,27 @@ public:
     int PicOrderCntMsb;
     //内存控制标志
     uint8_t memory_management_control_operation;
-    //这个值用来指明当前pic的预测状态， 用十进制位来表示
     
-    int LongTermFrameIdx;
     int get_POC()          {return Min(TopFieldOrderCnt, BottomFieldOrderCnt);}
     bool is_IDR()          {return type == 1 ? true : false;};
+    
+    //参考帧的相关属性
+    int LongTermFrameIdx;
     bool is_UsedForShort() {return state_Ref == Ref_short? true : false;};
     bool is_UsedForLong () {return state_Ref == Ref_long? true : false;};
     bool is_UsedForRef  () {return(state_Ref == Ref_long || state_Ref == Ref_short) ? true : false;};
+    bool is_Exist()        {return state_Ref == Nul_exist? false : true;};
     void set_UseForShort()      {state_Ref =  Ref_short ;};
     void set_UseForLong(int a)  {state_Ref =  Ref_long  ;LongTermPicNum = a;};
     void set_NotUseForRef()     {state_Ref =  Nun_ref   ;};
     void set_NotExist()         {state_Ref =  Nul_exist ;};
-    void is_Exist(){};
+    
+    void print_complete();
+
+    //是否输出的状态：已经输出(true)、未输出(false)
+    //由 Decoder 的 out_DecodedPic() 控制
+    bool state_Out;
+    
     //add a macroblock into the pic
     bool add_MB(int x, int y, macroblock* mb_ToAdd);
     

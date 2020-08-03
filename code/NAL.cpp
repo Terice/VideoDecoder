@@ -194,10 +194,10 @@ uchar** NAL::decode_PIC()
     picture* picture_cur = new picture(parser->pS->sps->pic_width_in_mbs_minus1+1, parser->pS->sps->pic_height_in_map_units_minus1+1, type == IDR ? 1 : 0);
     this->pic = picture_cur;
     //设置解码器的当前图像，用于MMOC中的CurPicNum
-    decoder->set_CurrentPic(picture_cur);
+    decoder->set_CurrentPic(pic);
 
     //设置CABAC的解码对象
-    parser->cabac_core->set_pic(picture_cur);
+    parser->cabac_core->set_pic(pic);
 
     //初始化一个slice之后就解码头部，
     //（slcie头没有依赖的数据，可以先解）
@@ -289,14 +289,10 @@ uchar** NAL::decode_PIC()
     
 
     //像素字符化并输出pic
-    if(parser->debug->pic_terminalchar())
+    if((type == IDR || type == Non_IDR))
     {
-        if((type == IDR || type == Non_IDR))
-        {
-            pic->chs_MbToOutmatrix();
-            decoder->out_DecodedPic();
-            // std::cout << *pic << std::endl;
-        }
+        decoder->out_DecodedPic(parser->debug->pic_terminalchar());
+        // std::cout << *pic << std::endl;
     }
     
     if(parser->debug->nal_info())

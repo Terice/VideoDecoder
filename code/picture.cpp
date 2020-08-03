@@ -10,23 +10,26 @@
 #include "Charsample.h"
 
 #include "functions.h"
+
+void picture::print_complete()
+{
+    //宏块是否齐全的输出
+    printf(">>pic  :\n");
+    for (size_t i = 0; i < this->height_mb; i++)
+    {
+        if(i%4 == 0) printf("%-2lu\n", i/4 * 4);
+        for (size_t j = 0; j < this->width_mb; j++)
+        {
+            if(j%4 == 0) printf(" | ");
+            if(this->mb_inpic->get_value_xy(i, j) != NULL) printf("O");
+            else printf("~");
+        }
+        printf(" |\n");
+    }
+    printf("=>pic  :");
+}
 std::ostream& operator<<(std::ostream& out ,picture& pic)
 {
-    // //宏块是否齐全的输出
-    // printf(">>pic  :\n");
-    // for (size_t i = 0; i < pic.height_mb; i++)
-    // {
-    //     if(i%4 == 0) printf("%-2lu\n", i/4 * 4);
-    //     for (size_t j = 0; j < pic.width_mb; j++)
-    //     {
-    //         if(j%4 == 0) printf(" | ");
-    //         if(pic.mb_inpic->get_value_xy(i, j) != NULL) printf("O");
-    //         else printf("~");
-    //     }
-    //     printf(" |\n");
-    // }
-    // printf("=>pic  :");
-
     //字符画的输出
     printf("%s", pic.out_CharMatrix->data);
     return out;
@@ -431,6 +434,8 @@ picture::picture(int widthInMB, int heightInMB, int type)
     BottomFieldOrderCnt = 0;
     memory_management_control_operation = 0;
     LongTermFrameIdx = -1;
+
+    state_Out = false;
 }
 picture::~picture()
 {

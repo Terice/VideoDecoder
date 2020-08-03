@@ -50,8 +50,11 @@ public:
     picture* get_Ref1PicByI(int i){return *(list_Ref1.end() - i - 1);};
     picture* get_LastRef(){return list_Ref.size()>0?list_Ref.back():NULL;}
     void set_CurSlcie(Slice* to){cur_slice = to;}
+    
     //解码队列
-    //没有维护，遇到IDR图片就刷新，除此之外不停把新解码图片指针加入到队列尾
+    //没有维护，遇到IDR图片就刷新，除此之外不停把新解码图片指针加入到解码队列尾
+    //同时控制输出pic的压栈
+    //在slice的解码完成之后调用这个函数
     bool add_DecodedPic(picture* pic_toadd){list_Decoded.push_back(pic_toadd); list_Out.push(pic_toadd); return true;};
     bool add_ReferenPic(picture* pic_toadd);
     //先释放pic(pic包含所有的宏块数据) 然后清除解码队列
@@ -73,7 +76,7 @@ public:
     bool opra_RefModfication(int MaxPicNum, int  CurrPicNum, int num_ref_idx_lX_active_minus1, char X);
     std::vector<int> opra_ModS;
 
-    void out_DecodedPic();
+    void out_DecodedPic(bool);
 
     //打印参考列表
     void print_list();
