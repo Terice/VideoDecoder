@@ -7,7 +7,6 @@ extern "C"{
 #include <lua5.1/lauxlib.h>
 #include <lua5.1/lualib.h>
 }
-#define DEBUG_CONF "./Debug_conf.lua"
 inline bool getControlValue(lua_State* L, int idex)
 {
     bool result = false;
@@ -45,7 +44,7 @@ Debug::Debug(const char* filename_config)
     luaL_openlibs(L);
     int state = 1;//lua运行状态
     //先load一次lua文件，然后执行一次匿名函数（也就是这个文件）
-    if(luaL_loadfile(L, DEBUG_CONF) || lua_pcall(L, 0,0,0))
+    if(luaL_loadfile(L, filename_config) || lua_pcall(L, 0,0,0))
     {
         state = 0;
         printf("lua state machie error\n");
