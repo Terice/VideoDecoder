@@ -59,8 +59,11 @@ public:
 
     class NAL* cur_nal;
     bool find_nextNAL();
+    // 读入一个bit
     bool read_bi();
+    // 判断缓冲区是否字节对齐
     bool algi();
+    // 强制对齐
     bool read_al();
     uint64_t next(uint32_t size);
 

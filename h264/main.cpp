@@ -11,14 +11,18 @@ using namespace std;
 #include "Debug.h"
 #include "NAL.h"
 
-#define FILEPATH "../resource/fox.264"
+#ifndef FILEPATH
+#define FILEPATH argv[1]
+#endif
+
 #define FILEPATH_DEBUG_CONF "./Debug_conf.lua"
 
 int main(int argc, char* argv[])
 {
     FILE* fp;
     
-    if((fp = fopen(FILEPATH, "r")) == NULL) {printf("input file err\n");exit(-1);};
+    if((fp = fopen(FILEPATH, "r")) == NULL) {printf("input file err: %s\n", FILEPATH);exit(-1);}
+    else printf(">> file: open: [%s]", FILEPATH);
 
 
     //这三个对象分别是Debug器，解析器，解码器

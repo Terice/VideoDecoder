@@ -439,6 +439,7 @@ void Slice::Calc_POC()
         else cur->BottomFieldOrderCnt = cur->PicOrderCntMsb + ps->pic_order_cnt_lsb;
     }
     cur->POC = Min(cur->TopFieldOrderCnt, cur->BottomFieldOrderCnt);
+    std::cout << ">> slice: POC:" << cur->POC << std::endl;
 }
 //这里只是做了frame的返回，还有其他的情况没有写：自适应 和 场
 macroblock* Slice::get_curMB(){return cur_macroblcok;}

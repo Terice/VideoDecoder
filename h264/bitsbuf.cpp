@@ -45,8 +45,8 @@ short Bitsbuf::bread_ch()
 bool Bitsbuf::bread()
 {
     if(bimax()) bfrsh();
-    uchar charIndex = buf_index / 8;
-    uchar bitsIndex = buf_index % 8;
+    size_t charIndex = buf_index / 8;
+    int bitsIndex = buf_index % 8;
     bool result = 1;
 
     if(!buf_state)
@@ -62,8 +62,8 @@ bool Bitsbuf::bread()
 }
 uint64_t Bitsbuf::bread_n(uchar size)
 {
-    uchar charSize = size / 8;
-    uchar bitsSize = size % 8;
+    size_t charSize = size / 8;
+    size_t bitsSize = size % 8;
     uint64_t result = 0, tmp = 0;
 
     if(charSize > 0)
@@ -126,7 +126,7 @@ void Bitsbuf::bufin(FILE* fp)
     if(fp != NULL) 
     {
         int ch = 0;
-        for(uint8_t count = 0;count < MAXBUFSIZE;count++)
+        for(size_t count = 0;count < MAXBUFSIZE;count++)
         {
             ch = fgetc(fp);
             if(ch == EOF) 
@@ -172,7 +172,7 @@ void Bitsbuf::bufin(uchar* ch)
 {
     if(ch != NULL)
     {
-        for (uchar i = 0; i < MAXBUFSIZE; i++)
+        for (size_t i = 0; i < MAXBUFSIZE; i++)
         {
             buf_data[i] = ch[i];
         }
@@ -180,7 +180,7 @@ void Bitsbuf::bufin(uchar* ch)
 }
 bool Bitsbuf::bempt()
 {
-    for (uchar i = 0; i < MAXBUFSIZE; i++)
+    for (size_t i = 0; i < MAXBUFSIZE; i++)
     {
         buf_data[i] = 0;
     }

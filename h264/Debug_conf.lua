@@ -50,7 +50,7 @@ DE_CONSPIC_RESULT_Cr             = 0
 --运动矢量
 DE_INTER_MOVEVECTOR              = 0
 --最后的图像字符画
-DE_PIC_TERMINATECHAR             = 1
+DE_PIC_TERMINATECHAR             = 0
 
 --所有的和时间有关的打印
 DE_TIMER                         = 0

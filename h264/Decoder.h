@@ -1,14 +1,14 @@
 #ifndef DECODER_H__
 #define DECODER_H__
 
-class picture;
-class matrix;
-class Slice;
 #include "array2d.h"
 #include <vector>
 #include <stack>
 #include "enums.h"
 #include "functions.h"
+class picture;
+class matrix;
+class Slice;
 
 class Decoder
 {
@@ -42,6 +42,7 @@ public:
 
     matrix* matrix_4x4Trans;
     matrix* matrix_2x2Trans;
+    
     picture* get_CurrentPic(){return pic_current;};
     void     set_CurrentPic(picture* pic){pic_current = pic;};
 

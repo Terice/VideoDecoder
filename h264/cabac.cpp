@@ -112,7 +112,7 @@ bool cabac::DecodeValueUsingCtxIdx(uint16_t ctxIdx_value, uint8_t bypassFlag_val
         }
         else//decode decision
         {
-            uint16_t qCodIRangeIdx = (codIRange >> 6) & 3;
+            uint16_t qCodIRangeIdx = (codIRange >> 6) & 3; // codIRange是一个9位的值，去掉低6位，高3位用来计算小区间的长度。
             uint16_t codIRangeLPS = rangeTabLPS[pStateIdx][qCodIRangeIdx];
             if(debug->cabac_state_running())     
             {
@@ -129,21 +129,29 @@ bool cabac::DecodeValueUsingCtxIdx(uint16_t ctxIdx_value, uint8_t bypassFlag_val
                 // printf("LPS(%3d)\n", transIdxLPS[pStateIdx]);
 
             }
-            codIRange = codIRange - codIRangeLPS;
-            if(codIOffset >= codIRange)
+            codIRange = codIRange - codIRangeLPS;// 得到小概率区间的起始值， 也就是得到当前大小概率区间的分界值
+            // 解码区间[[大概率区间],[小概率区间]]
+            if(codIOffset >= codIRange) // 当前的数值落在小区间内（大于大概率符号区间的长度），说明是LPS
             {
-                binVal = !(bool)valMPS;
-                codIOffset -= codIRange;
-                codIRange = codIRangeLPS;
-                if(pStateIdx == 0) 
-                    {(*ctxIdxOfInitVariables)[ctxIdx_value][1] = 1 - valMPS;};
-                (*ctxIdxOfInitVariables)[ctxIdx_value][0] = transIdxLPS[pStateIdx];
+                binVal = !(bool)valMPS  ; // 大概率字符取反就是小概率字符
+                codIOffset -= codIRange ; // 当前数值减去小区间的起始值，得到在小区间中的数值
+
+                codIRange = codIRangeLPS; // 同时把解码全区间（注意是大小一起的区间）设置为下一个小区间的范围，因为下一次需要在这个区间运算
+                // 注意大概率区间是在这个if之前那一步运算的，所以这里计算全区间就可以了。
+                
+                // 如果当前的概率索引是0，也就是说状态不断转换的过程中小概率字符出现的几率已经到了0.5,而这个if是用来处理小概率字符的
+                // 也就是说现在小概率字符几率到了0.5,并且马上要处理的这个字符也是小概率字符，那么小概率字符就会变成大概率字符，所以有了下一步
+                if(pStateIdx == 0) {(*ctxIdxOfInitVariables)[ctxIdx_value][1] = 1 - valMPS;};
+                (*ctxIdxOfInitVariables)[ctxIdx_value][0] = transIdxLPS[pStateIdx];// 状态往小概率转
             }
-            else
+            else // 否则说明当前是大概率字符，取出valMPS，并且当前ctxIdx的状态往右边走一步（大概率方向）
             {
+                // 大概率字符的区间始终都是从0开始的，所以不需要进行区间的变换，
+                // 下一次直接把小区间的长度减去就得到整个解码区间了
                 binVal = (bool)valMPS;
                 (*ctxIdxOfInitVariables)[ctxIdx_value][0] = transIdxMPS[pStateIdx];
             }
+            // 这里无论是if还是else 最后得到的codIRange的值都一定是代表全区间
             RenormD();
         }
     }
@@ -152,6 +160,8 @@ bool cabac::DecodeValueUsingCtxIdx(uint16_t ctxIdx_value, uint8_t bypassFlag_val
 }
 void cabac::RenormD()
 {
+    // 归一化把编码区间的放大到9位
+    // 同时读取offset，来确定当前编码值所在的位置
     while(codIRange < 256)
     {
         codIRange  <<= 1;
@@ -172,24 +182,35 @@ uint8_t cabac::init_variable()
     else {mncol = lifeTimeSlice->ps->cabac_init_idc + 1;}
  
     pStateIdx = 63; valMPS = 0;
+    //每个上下文模型是由大概率字符valMPS(Most Probable Symbol，MPS)和概率状态索引(pStateldx)两个部分组成
     ctxIdxOfInitVariables->set_value(276, 0, pStateIdx);
     ctxIdxOfInitVariables->set_value(276, 1, valMPS);
 
+    // 句法元素表一共有43行，要一一对应初始化
+    // 这里的43不是指句法元素的数量，也不是ctxIdx的数量
+    // 因为一个句法元素可能有多组ctxIdx，而ctxIdx是1024个，所以这里的ctxIdx的变量值是1024行
     for (size_t i = 0; i < 43; i++)     //i is ctx  Idx range of current syntax element, init all 43 rows
     {
-
+        // ctxRangeCol确定这一slice对应的是哪一行元素
         if(lifeTimeSliceType == SI) {ctxRangeCol = 0;}
         else if(lifeTimeSliceType == I){ctxRangeCol = 1;}
         else if(lifeTimeSliceType == P || lifeTimeSliceType == SP) {ctxRangeCol = 2;}
         else {ctxRangeCol = 3;}
-        
+        // 从每一个句法元素的下限开始，一直初始化到上限
         for (size_t j = ctxIdxRangOfSyntaxElements[i][ctxRangeCol][0]; j <= ctxIdxRangOfSyntaxElements[i][ctxRangeCol][1]; j++)
         {   //j is ctxIdx
+            // m和n代表了两个变量值，这个值是用来初始化ctxIdx的变量（也就是pState和MPS）用的
             m = mnValToCtxIdex[j][mncol][0];
             n = mnValToCtxIdex[j][mncol][1];
+
+            // 上下限都是0说明是na或者udf，此时不需要管（因为不会用到）
             if(!(ctxIdxRangOfSyntaxElements[i][ctxRangeCol][0] == 0 && ctxIdxRangOfSyntaxElements[i][ctxRangeCol][1] == 0))
             {
-                preCtxState = (uint8_t)Clip3(1, 126,      ((m *  Clip3(0, 51, (int)lifeTimeSlice->ps->SliceQPY)) >> 4) + n         );
+                preCtxState = (uint8_t)Clip3(\
+                    1,\
+                    126,\
+                    ((m *  Clip3(0, 51, (int)lifeTimeSlice->ps->SliceQPY)) >> 4) + n\
+                );
                 if(preCtxState <= 63)
                 { 
                     pStateIdx = 63 - preCtxState;
@@ -214,7 +235,8 @@ uint8_t cabac::init_engine()
     return 1;
 }
 
-//返回的是值的索引，
+// 是否是mbtype的二值化串
+// 返回的是值的索引，
 int InBinarization(uint16_t result, int binIdx, const uint8_t binarization_chart[][2])
 {
     int re = -1;
@@ -228,6 +250,7 @@ int InBinarization(uint16_t result, int binIdx, const uint8_t binarization_chart
         if(result == binarization_chart[i][0] && binarization_chart[i][1] == binIdx + 1){re = i; break;}
     return re;
 }
+// 是不是submbtype的二值化串
 int InBinarizationSub(uint16_t result, int binIdx, const uint8_t binarization_chart[][2])
 {
     int re = -1;
@@ -240,6 +263,8 @@ int InBinarizationSub(uint16_t result, int binIdx, const uint8_t binarization_ch
         if(result == binarization_chart[i][0] && binarization_chart[i][1] == binIdx + 1){re = i; break;}
     return re;
 }
+
+
 bool cabac::Binarization_mbtype_submbtype(uint16_t &maxBinIdxCtx, int &ctxIdxOffset, uint8_t &bypassFlag)
 {
     if(lifeTimeSlice->get_type() == I){maxBinIdxCtx = 6; ctxIdxOffset = 3; bypassFlag = 0;return true;}

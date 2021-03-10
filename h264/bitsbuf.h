@@ -5,7 +5,7 @@
 #include<stdio.h>
 using std::endl;
 using std::cout;
-#define MAXBUFSIZE 32
+#define MAXBUFSIZE 1024
 typedef unsigned char uchar;
 
 /*
@@ -17,10 +17,10 @@ private:
     uchar* buf_data;
     uchar buf1_data[MAXBUFSIZE];
     uchar* buf2_data;
-    uint8_t state = 0;//防止竞争状态
-    bool buf_state = 0;//0-empty 1-full
+    uint8_t state   = 0;//防止竞争状态
+    bool buf_state  = 0;//0-empty 1-full
     bool buf2_state = 0;//0-empty 1-full
-    int buf_index = 0;//the first bit
+    unsigned int buf_index   = 0;//the first bit
     uchar buf_errmsg;
     FILE* datares;
     void bseti(char indextoset);

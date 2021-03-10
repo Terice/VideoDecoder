@@ -166,6 +166,7 @@ void Inverse4x4Scan(int* res, matrix& dst)
     if(res == dst.data) Sdelete_l(cur);
     //
 }
+
 uint8_t v[6][3] = {
         {10, 16, 13},    
         {11, 18, 14},

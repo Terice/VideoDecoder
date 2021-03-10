@@ -40,7 +40,7 @@ private:
     char de_timer                          ;
     char de_nal_info                       ;
 
-    bool control_all;
+    bool control_all                       ;
 public:
     void set_control_all(bool control){control_all = control;}
 

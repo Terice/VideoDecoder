@@ -24,7 +24,7 @@ bool NAL::decode()
         case IDR:decode_PIC();break;
         case PPS:decode_PPS();break;
         case SPS:decode_SPS();break;
-        default:printf("error or nowrite nal\n");break;
+        default:std::cout << "error or nowrite nal:" << type << std::endl; break;
     }
     return true;
 }
@@ -83,7 +83,7 @@ void NAL::decode_SPS()
     data->frame_mbs_only_flag                     = parser->read_un(1);//
     if(!data->frame_mbs_only_flag) 
     {
-        data->mb_adaptive_frame_field_flag         = parser->read_un(1);//
+        data->mb_adaptive_frame_field_flag        = parser->read_un(1);//
     }
     data->direct_8x8_inference_flag               = parser->read_un(1);//
     data->frame_cropping_flag                     = parser->read_un(1);//
@@ -177,7 +177,7 @@ void NAL::decode_PPS()
     data->redundant_pic_cnt_present_flag                         = parser->read_un(1);//
     if(0)
     {
-        data->transform_8x8_mode_flag                                = parser->read_un(1);//
+        data->transform_8x8_mode_flag                            = parser->read_un(1);//
     }
     this->data = data;
     
@@ -207,23 +207,12 @@ uchar** NAL::decode_PIC()
     Slicetype sl1_type = sl1->get_type();
     
 
-    //每次解完头，把frame_num这个句法赋值给pic，然后用decoder去解picture numbers
+    //每次解完头，把frame_num这个句法赋值给pic，然后用 decoder 去解picture numbers
     pic->FrameNum = sl1->ps->frame_num;
     //解码picture numbers
     decoder->calc_PictureNum();
 
-    //初始化参考列表，把pic_current指针加入到相应的参考列表中去
-    //解I帧不需要参考，只需要标记
-    //初始化参考表(根据上一次的标记)
-    if(sl1_type == P || sl1_type == SP || sl1_type == B)
-    decoder->init_RefPicList();
 
-    //修改
-    //操作符在 decoder 中已经指定和如何移除，所以这里不用做是否启用这个函数的判定
-    decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l0_active_minus1, 0);
-    decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l1_active_minus1, 1);
-
-    //至此参考列表建立完成
 
     //slice数据块解码依赖于参考列表所以放在参考列表建立完之后
     sl1->PraseSliceDataer();

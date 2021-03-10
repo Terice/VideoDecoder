@@ -25,7 +25,6 @@ private:
 
     uint8_t init_variable();
     uint8_t init_engine();
-    bool Binarization_mbtype_submbtype(uint16_t &maxBinIdxCtx, int &ctxIdxOffset, uint8_t &bypassFlag);
     uint16_t DecodeCtxIdxUsingBinIdx(uint16_t binIdx, uint16_t maxBinIdxCtx, int ctxIdxOffset, int syntaxRequest);
     bool DecodeValueUsingCtxIdx(uint16_t ctxIdx_value, uint8_t bypassFlag_value);
     void RenormD();
@@ -50,8 +49,14 @@ private:
     uint8_t read_coeff_sign_flag(int);
     uint32_t read_coeff_abs_level_minus1(int);
 
+    // 二值化的方法
+    // 基于查表的方法
+    bool Binarization_mbtype_submbtype(uint16_t &maxBinIdxCtx, int &ctxIdxOffset, uint8_t &bypassFlag);
+    // 一元二值化
     int IsIn_U_binarization(uint64_t value, uint8_t length);    //if is, return value, if not, return -1
+    // 截断一元二值化
     int IsIn_TU_binarization(uint32_t value, uint8_t cMax, uint8_t length);//if is, return value, if not, return -1
+    // k阶指数哥伦布二值化
     //判断是不是在UEGk二值串中，如果是，返回这个二值串的值，否则返回-1
     //五个参数分别是：当前的值，当前的长度，signedValFlag uCoeff k由句法表得到
     int IsIn_UEGk_binarization(uint32_t value, uint8_t length, uint8_t  signedValFlag, uint8_t uCoeff, uint8_t k);

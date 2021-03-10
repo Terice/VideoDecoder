@@ -213,7 +213,7 @@ void macroblock::Parse(int mode)
             {
                 predFlagL0[mbPartIdx] = Get_PredFlag(this, mbPartIdx, 0);
                 if(up_slice->get_type() == B)
-                predFlagL1[mbPartIdx] = Get_PredFlag(this, mbPartIdx, 1);
+                	predFlagL1[mbPartIdx] = Get_PredFlag(this, mbPartIdx, 1);
             }
             for(mbPartIdx = 0; mbPartIdx < 4; mbPartIdx++)
                 if((up_slice->ps->num_ref_idx_l0_active_minus1 > 0 || up_slice->ps->mb_field_decoding_flag != up_slice->ps->field_pic_flag) &&\
@@ -336,6 +336,7 @@ void macroblock::Parse(int mode)
                 //     } 
                 // }
                 //16x16的帧内预测，一共四种方式
+                
                 if(parser_g->pV->ChromaArrayType == 1 || parser_g->pV->ChromaArrayType == 2) 
                     intra_chroma_pred_mode = parser_g->read_ae(35);//ue|ae
             }
@@ -420,7 +421,7 @@ void macroblock::Parse(int mode)
             }
             //----------------------------------------------------------
         }
-        else //Direct预测 指的是 B_Direct_16x16
+        else // Direct预测 指的是 B_Direct_16x16
         {
             //
             //B_Direct_16x16 没有运动矢量、参考索引 但是 有残差，所以需要出现在这里
@@ -467,9 +468,9 @@ void macroblock::Parse(int mode)
             CodedBlockPatternLuma = macroBlockInfo_I_slice[mb_type][4];
         }
         //计算残差
-        de->set_TimeFlag();
+        
         Calc_residual();
-        de->de_DltTime("re end");
+        
     }
 }
 void macroblock::Calc_residual()
@@ -959,7 +960,8 @@ int macroblock::Prediction_Inter_Direct(int mbPartIdx, int subMbPartIdx)
     //
     //对于 B_Direct_8x8 这里解码完毕
     //对于 B_Direct_16x16 B_Skip 这个函数需要分别执行4次
-    //实际上分别是4次(B_Direct_8x8)和16次(B_Direct_16x16 和 B_Skip)，做了简化
+    // 这里指明了subMbPartIdx 所以是针对与子块来说的
+    // 也就是说，如果需要重复解码的话，需要在这个函数的外面进行，而不是在这里
     //到这里运动矢量、参考索引、预测标志位 就已经解码完毕
 
     
