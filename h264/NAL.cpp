@@ -212,6 +212,19 @@ uchar** NAL::decode_PIC()
     //解码picture numbers
     decoder->calc_PictureNum();
 
+    //初始化参考列表，把pic_current指针加入到相应的参考列表中去
+    //解I帧不需要参考，只需要标记
+    //初始化参考表(根据上一次的标记)
+    if(sl1_type == P || sl1_type == SP || sl1_type == B)
+    decoder->init_RefPicList();
+
+    //修改
+    //操作符在 decoder 中已经指定和如何移除，所以这里不用做是否启用这个函数的判定
+    decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l0_active_minus1, 0);
+    decoder->opra_RefModfication(sl1->ps->MaxPicNum, sl1->ps->CurrPicNum, sl1->ps->num_ref_idx_l1_active_minus1, 1);
+
+    //至此参考列表建立完成
+
 
 
     //slice数据块解码依赖于参考列表所以放在参考列表建立完之后
